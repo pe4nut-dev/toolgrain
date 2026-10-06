@@ -1,3 +1,4 @@
+import {SiteAnalytics} from '@/components/analytics/site-analytics';
 import type { Metadata } from 'next';
 import './globals.css';
 import {getAccount} from '@/lib/auth/account';
@@ -18,4 +19,4 @@ export const metadata: Metadata = {
 };
 export default async function RootLayout({ children }: {
     children: React.ReactNode;
-}) { const account=await getAccount();return <html lang="en"><body><a className="skip-link" href="#main">Skip to content</a><AccountProvider plan={account.plan} signedIn={!!account.user}><Header /><main id="main">{children}<SiteFeedbackCTA /></main><Footer /></AccountProvider></body></html>; }
+}) { const account=await getAccount();return <html lang="en"><body><a className="skip-link" href="#main">Skip to content</a><AccountProvider plan={account.plan} signedIn={!!account.user}><Header /><main id="main">{children}<SiteFeedbackCTA /></main><Footer /></AccountProvider><SiteAnalytics /></body></html>; }
