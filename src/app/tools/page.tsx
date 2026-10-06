@@ -1,6 +1,12 @@
 import { pageMetadata } from '@/config/metadata';
-import { Suspense } from 'react';
 import { Container } from '@/components/ui/shared';
-import { ToolDirectoryWithCategory } from '@/components/tools/tool-directory-wrapper';
+import { ToolDirectory } from '@/components/tools/tool-directory';
+
 export const metadata = pageMetadata('Explore tools','Browse focused tools for data, ecommerce, documents and repetitive business tasks. Start with the CRM CSV Cleaner.','/tools');
-export default function Tools() { return <Container className="page-section"><p className="eyebrow">YOUR EVERYDAY TOOLKIT</p><h1 className="page-title">A tool for the task.</h1><p className="page-description">Small, focused helpers for the work that gets in the way.</p><Suspense fallback={<p>Loading tool directory…</p>}><ToolDirectoryWithCategory /></Suspense></Container>; }
+
+export default async function Tools({ searchParams }: { searchParams: Promise<{ category?: string | string[] }> }) {
+  const params = await searchParams;
+  const category = Array.isArray(params.category) ? params.category[0] : params.category;
+
+  return <Container className="page-section"><p className="eyebrow">YOUR EVERYDAY TOOLKIT</p><h1 className="page-title">A tool for the task.</h1><p className="page-description">Small, focused helpers for the work that gets in the way.</p><ToolDirectory key={category ?? 'all'} initialCategory={category} /></Container>;
+}
