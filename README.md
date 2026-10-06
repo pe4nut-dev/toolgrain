@@ -208,3 +208,54 @@ The output preview indexes existing validation metadata by data row and output f
 Source supplier rows remain immutable. A working-output state retains the mapping/transformation baseline, a separate corrected result, and per-row mapped/generated/manual handle provenance. Existing output columns support focused editing for Title, URL handle, SKU, Barcodes, Price, Compare-at price, Cost per item, Inventory quantity, Product image URL, Image alt text, Vendor, Type, Tags and Status. Apply commits a correction and reuses the existing validators across a separate output snapshot, including global uniqueness checks. No validation runs on keystrokes. Unresolved monetary errors retain their original input and locale interpretation across unrelated edits. Invalid edits remain visible in the editor with announced messages.
 
 Generated handles are regenerated deterministically on Title edits while reserving mapped/manual handles; manual handle corrections are never silently suffixed or replaced. Reset changes restores the original mapped result and issues and cancels open editors. Mapping/default/file changes invalidate corrections. Export consumes the corrected working result and remains blocked by errors. Safe suggestions, bulk editing and undo history are outside this MVP. All processing remains local, with no image fetching or external validation.
+
+## Free / Pro foundation (Phase 11.2)
+
+Plans, prices and limits live in `src/config/plans.ts`. `src/lib/entitlements/index.ts` owns the current-plan boundary and pure row/file-size checks. Anonymous visitors use Free. Phase 11.3 supplies authenticated plans from server-verified, RLS-protected account profiles; there is no development Pro switch, URL parameter or storage override. These local client checks are a product foundation, not secure paid-entitlement enforcement.
+
+| Tool | Free | Planned Pro |
+| --- | --- | --- |
+| CRM CSV Cleaner | 500 data rows | 50,000 data rows |
+| CSV Compare | 500 data rows per file | 50,000 data rows per file |
+| Supplier CSV to Shopify | 100 source/product rows | 10,000 source/product rows |
+| File size | 10 MB per file | 25 MB per file |
+
+Row counts exclude the header and use the existing CSV parser’s data-row semantics. Byte limits retain the existing 1 MB = 1024² bytes convention. Exact limits are allowed. Files above row limits may be parsed locally for their counts; CRM analysis, comparison and supplier mapping/transformation are stopped. Files above size limits are rejected before parsing, with separate plan-limit and maximum-supported-limit messaging. Under-limit Free workflows include full results, review and exports.
+
+Pricing uses central €8.90/month and €69.00/year values. Pro is coming soon; no checkout or payment details are implemented. Accounts are prepared in Phase 11.3 below. `/pricing` is indexable and in the sitemap. UpgradePrompt is reused across tools and states clearly that purchases are not available. Re-run privacy/legal review when Auth or payments are actually introduced.
+
+## Supabase accounts (Phase 11.3)
+
+Status: integration and reproducible setup are prepared; a Supabase project must still be configured. With absent/placeholder environment variables, account forms are disabled and anonymous Free tools continue to work. Do not enable public signup until migration, email configuration and privacy setup are complete.
+
+### Setup
+
+1. Create a Supabase project in your chosen region. Verify its processing contract, region, retention, backups and email providers; do not assume all processing stays in Germany/the EEA.
+2. In Supabase Connect obtain the Project URL and **publishable** key (sb_publishable_...). Copy .env.example to ignored .env.local and replace both placeholders. Only NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are required. No service-role/secret key is needed or included. Never put sb_secret_... or a service-role JWT into NEXT_PUBLIC variables.
+3. Apply supabase/migrations/202610060001_accounts.sql using Supabase SQL Editor as database administrator. Alternatively use the official Supabase CLI: supabase login, supabase link --project-ref YOUR_PROJECT_REF, then supabase db push from this project.
+4. Auth → Sign In / Providers: enable Email + password, keep email confirmation enabled, and configure minimum password length of at least 8. No social providers. Magic-link login supports existing accounts only; use Signup to create an account.
+5. Auth → URL Configuration: Site URL https://toolgrain.com. Allow Redirect URLs https://toolgrain.com/auth/callback and http://localhost:3000/auth/callback (including callback query parameters used below). Avoid wildcard production domains. Local development assumes port 3000. Production callbacks deliberately use toolgrain.com; Vercel preview domains are not implicitly allowed.
+6. Auth → Email Templates: for **Confirm signup** and **Magic link**, use this SSR token-hash link:
+
+   <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email">Continue to Toolgrain</a>
+
+   The app always supplies emailRedirectTo ending in /auth/callback?next=..., so & is intentional. Test template rendering before launch. The callback also accepts PKCE code links if the default confirmation URL is retained; these require the requesting browser’s verifier cookie. Token-hash links support another browser. Never log passwords or auth link tokens.
+7. Configure production SMTP/email delivery, sender identity and rate limits. Supabase’s default email service may restrict recipients/rates. Disable email open/click tracking; link rewriting/scanners can consume one-time tokens. Verify actual signup, confirmation and magic-link delivery.
+8. In Vercel configure the two public variables for the intended environment and rebuild/redeploy. Public build-time values must match server values. No additional secret variable is needed.
+9. After installing Supabase CLI/Docker, run supabase init (once, to create the local CLI configuration), supabase start, supabase db reset, supabase test db against a local/test database. supabase/tests/account_rls.sql runs ten pgTAP assertions in a rolled-back transaction. Never use production accounts as fixtures. No live project is needed for pnpm test, which mocks Supabase.
+
+### Account and entitlement boundary
+
+Supabase manages auth.users. public.profiles contains id, email, plan, created_at and updated_at. Its Auth ID has cascading deletion. Database triggers create/backfill Free profiles and synchronize email changes; signup metadata cannot set plan. RLS allows authenticated users to read their own profile only. No client INSERT/UPDATE/DELETE grants or policies exist. Browser users cannot promote themselves. No Stripe fields or values are invented; future trusted webhooks can write plan through a privileged backend. Limits remain exclusively in src/config/plans.ts.
+
+Server rendering verifies the user with getUser and reads their own RLS-protected profile. Missing/error profiles fall back to Free. A read-only AccountProvider passes the verified plan to local tools. Pages render dynamically; authentication responses use private/no-store headers to prevent cross-user session/plan caching. Proxy refreshes cookies with getClaims and preserves refreshed cookies/cache headers. Authorization never trusts unverified getSession, user metadata, cookie plan fields, query switches or browser storage.
+
+/login, /signup, /account and /auth/callback are noindex and excluded from sitemap. Anonymous /account redirects to /login?next=%2Faccount. Return destinations are restricted to known internal Toolgrain paths. Forms use server actions accepting email/password/return path only; no tool state or CSV values. Raw upstream errors are mapped to fixed messages and never logged. Sign-out revokes the Supabase session and refreshes server account state.
+
+### Storage / privacy audit
+
+Configured Supabase SSR persists essential access/refresh sessions and PKCE verifiers in sb-... cookies, potentially chunked. Path /, SameSite Lax, Secure in production. The official SSR defaults are browser-readable for browser/server interoperability; their contents are verified server-side. The SDK cookie max-age is a storage expiry, not JWT validity or a promised server-data retention period. Current UI uses server actions and does not instantiate the optional browser client; no localStorage/sessionStorage persistence or tokens-only/userStorage mode is enabled. No analytics, third-party external scripts, tracking or consent banner are added. Cookies support requested authentication. Re-audit if the browser helper or future integrations change.
+
+Only account/auth metadata reaches Supabase. No Storage uploads, tool-data inserts or saved file histories. CSV analysis, comparison, corrections and exports remain in browser memory/downloads, including when signed in. The privacy policy distinguishes those boundaries without inventing a project region, retention period or transfer mechanism.
+
+The same Supabase project can later host feedback tickets. No ticket system/schema is built now and the existing mailto flow is unchanged. Stripe, billing controls, social login, password-recovery UI and account self-deletion UI are outside this phase. Users can contact the controller for account/data requests. Complete live signup, confirmation, magic link, login, account, signout and network/privacy checks after setup. Mocked tests do not certify a deployed database’s RLS.

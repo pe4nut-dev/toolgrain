@@ -4,6 +4,8 @@ import { Upload, AlertCircle } from 'lucide-react';
 import { formatFileSize, validateFiles, type FileSelectionRules } from '@/lib/files';
 
 type FileDropzoneProps = FileSelectionRules & {
+  onFileSizeRejected?: (file: File) => void;
+  fileSizeError?: (file: File) => string;
   disabled?: boolean;
   focusOnMount?: boolean;
   validationError?: string | null;
@@ -12,7 +14,7 @@ type FileDropzoneProps = FileSelectionRules & {
   title?: string;
   fileTypeLabel?: string;
 };
-export function FileDropzone({ acceptedTypes, multiple = false, maxFileSize, fileTypeError, disabled = false, focusOnMount = false, validationError, onFilesSelected, onValidationChange, title = 'Drop your files here', fileTypeLabel = acceptedTypes.join(', ') || 'Any file type' }: FileDropzoneProps) {
+export function FileDropzone({ acceptedTypes, multiple = false, maxFileSize, fileTypeError, onFileSizeRejected, fileSizeError, disabled = false, focusOnMount = false, validationError, onFilesSelected, onValidationChange, title = 'Drop your files here', fileTypeLabel = acceptedTypes.join(', ') || 'Any file type' }: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
   const [dragOver, setDragOver] = useState(false);
@@ -24,9 +26,11 @@ export function FileDropzone({ acceptedTypes, multiple = false, maxFileSize, fil
 
   function selectFiles(files: File[]) {
     if (disabled || files.length === 0) return;
-    const validationError = validateFiles(files, { acceptedTypes, multiple, maxFileSize, fileTypeError });
+    const oversized = !validateFiles(files, { acceptedTypes, multiple, maxFileSize: Infinity, fileTypeError }) ? files.find(file=>file.size>maxFileSize) : undefined;
+    const validationError = oversized && fileSizeError ? fileSizeError(oversized) : validateFiles(files, { acceptedTypes, multiple, maxFileSize, fileTypeError });
     setLocalError(validationError);
     onValidationChange?.(validationError);
+    if (oversized) onFileSizeRejected?.(oversized);
     if (!validationError) onFilesSelected(files);
   }
   function isFileDrag(event: DragEvent) { return Array.from(event.dataTransfer.types).includes('Files'); }

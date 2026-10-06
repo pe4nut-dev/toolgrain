@@ -6,5 +6,5 @@ export const siteConfig = {
   description: 'Focused browser tools for cleaning data, comparing files and handling repetitive business tasks.',
   contactEmail: 'info@toolgrain.com',
   socialLinks: [],
-  navigation: [{ label: 'Tools', href: '/tools' }, { label: 'About', href: '/about' }],
+  navigation: [{ label: 'Tools', href: '/tools' }, { label: 'Pricing', href: '/pricing' }, { label: 'About', href: '/about' }],
 } as const;

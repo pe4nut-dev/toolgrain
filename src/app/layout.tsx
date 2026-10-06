@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import {getAccount} from '@/lib/auth/account';
+import {AccountProvider} from '@/components/auth/account-provider';
+export const dynamic='force-dynamic';
 import { siteConfig } from '@/config/site';
 import { Header } from '@/components/layout/header';
 import { SiteFeedbackCTA } from '@/components/layout/feedback-cta';
@@ -13,6 +16,6 @@ export const metadata: Metadata = {
  openGraph:{locale:'en_US',type:'website',siteName:siteConfig.name,title:siteConfig.name+' – '+siteConfig.tagline.replace(/\.$/,''),description:siteConfig.description,url:siteConfig.url},
  robots:{index:true,follow:true},
 };
-export default function RootLayout({ children }: {
+export default async function RootLayout({ children }: {
     children: React.ReactNode;
-}) { return <html lang="en"><body><a className="skip-link" href="#main">Skip to content</a><Header /><main id="main">{children}<SiteFeedbackCTA /></main><Footer /></body></html>; }
+}) { const account=await getAccount();return <html lang="en"><body><a className="skip-link" href="#main">Skip to content</a><AccountProvider plan={account.plan} signedIn={!!account.user}><Header /><main id="main">{children}<SiteFeedbackCTA /></main><Footer /></AccountProvider></body></html>; }

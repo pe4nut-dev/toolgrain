@@ -8,6 +8,7 @@ next-env.d.ts
 
 # Environment files and credentials
 .env*
+!.env.example
 *.pem
 *.key
 
