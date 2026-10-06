@@ -126,14 +126,14 @@ Four category downloads are generated on demand from the current comparison; rep
 
 - Added: original new-file columns/order and values, with no metadata.
 - Removed: original old-file columns/order and values, with no metadata.
-- Changed: key, column, old_value, new_value; one record per changed field. Matching key is trimmed; original field values are preserved.
+- Changed: key, column, old_value, new_value; one record per changed field. Key uses the original new-file spelling; original field values are preserved.
 - Key issues: issue_type, file, key, record_numbers, details. One report record per file/group; record numbers are semicolon-separated. Missing keys use missing_key; duplicates use duplicate_key; a unique record blocked by an opposite-file duplicate uses ambiguous_key. The UI counts issue groups, so the CSV may contain more report records than that count.
 
 Export uses PapaParse unparse, UTF-8 BOM and CRLF record separators, preserving quoted delimiters, whitespace, empty cells, multiline strings and Unicode. Added/Changed/Key issues use the new delimiter; Removed uses the old delimiter. Comma, semicolon and tab are supported; other delimiters fall back to comma.
 
 Filename helper retains spaces, Unicode and multiple dots, strips a final .csv extension case-insensitively, removes path components and replaces filesystem-unsafe characters. Basenames are limited to 180 characters. Suffixes: -added.csv, -removed.csv, -changed.csv and -key-issues.csv. Empty basenames fall back to comparison.
 
-29 export tests cover source integrity, full-result generation, roundtrips, filenames and browser Blob/download-anchor lifecycle, including a 10,000-row export. Production-style browser checks cover the controls and responsive widths (375/768/desktop). Generated report bytes re-import successfully; the embedded browser does not expose a completed download event or saved file, so native-browser file saving remains a final smoke-test item.
+30 export tests cover source integrity, full-result generation, roundtrips, filenames and browser Blob/download-anchor lifecycle, including a 10,000-row export. Production-style browser checks cover the controls and responsive widths (375/768/desktop). Generated report bytes re-import successfully; the embedded browser does not expose a completed download event or saved file, so native-browser file saving remains a final smoke-test item.
 
 ## CRM Cleaner — V0.2 duplicate keys and email validation
 
@@ -164,3 +164,9 @@ Important indexed routes: /, /tools, /tools/crm-csv-cleaner, /tools/csv-compare 
 Every route owns its canonical and Open Graph URL. Available tools have static explanations, use cases, reciprocal links and visible FAQs. FAQPage JSON-LD uses exactly the same registry FAQs; the homepage includes minimal WebSite data without SearchAction. SoftwareApplication data is omitted to keep this phase minimal and avoid implying ratings, pricing or offers. No analytics/tracking is added.
 
 Google Search Console is configured externally. After deploying these code changes, submit or refresh the sitemap in Search Console and inspect the homepage and available-tool URLs. Check deployed canonicals, crawling and structured data; indexing and rich-result eligibility are controlled by search engines.
+
+## CSV Compare V1 export verification
+
+Four non-empty report categories are downloadable locally. Added uses new-file rows and Removed old-file rows, with original headers/order/cells. Changed exports key,column,old_value,new_value using the original new-file key. Key issues preserve the first original key spelling per file/group (missing keys are empty); record numbers include the header and use semicolon separation. Different whitespace spellings in a duplicate group remain visible in the source file. Download failures show an accessible retry message. No ZIP/XLSX, composite keys, saved comparisons or server uploads are added.
+
+V1 check: 223 tests pass, including 30 export/download tests; TypeScript, ESLint and production build pass. Desktop/768px/375px export controls were checked without page overflow. All four generated reports were re-imported through the real file chooser successfully. The embedded browser still does not confirm a completed saved download, so an actual native-browser save remains a manual release check.

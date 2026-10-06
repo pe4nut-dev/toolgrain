@@ -19,14 +19,16 @@ export function createComparisonExport(category: ExportCategory, result: Compari
   data = result[category].map(record=>source.columns.map(c=>record.row[c.key] ?? ''));
  } else if (category === 'changed') {
   fields = ['key','column','old_value','new_value'];
-  data = result.changed.flatMap(record=>record.changes.map(change=>[record.key,change.column,change.oldValue,change.newValue]));
+  data = result.changed.flatMap(record=>record.changes.map(change=>[record.newRow.row[result.newKey.key] ?? '',change.column,change.oldValue,change.newValue]));
  } else {
   fields = ['issue_type','file','key','record_numbers','details'];
   data = result.issues.flatMap(issue=>(['old','new'] as const).flatMap(file=>{
    const rows = file === 'old' ? issue.oldRows : issue.newRows;
    if (!rows.length) return [];
    const missing = issue.reason === 'missing', duplicate = rows.length > 1;
-   return [[missing ? 'missing_key' : duplicate ? 'duplicate_key' : 'ambiguous_key', file, issue.key, rows.map(r=>r.rowNumber).join(';'), missing ? 'Key value is empty' : duplicate ? 'Key occurs more than once in this file; all records for this key are excluded' : 'Excluded because this key occurs more than once in the other file']];
+   const keyColumn=file==='old'?result.oldKey:result.newKey;
+   const originalKey=missing?'':rows[0].row[keyColumn.key]??'';
+   return [[missing ? 'missing_key' : duplicate ? 'duplicate_key' : 'ambiguous_key', file, originalKey, rows.map(r=>r.rowNumber).join(';'), missing ? 'Key value is empty' : duplicate ? 'Key occurs more than once in this file; all records for this key are excluded' : 'Excluded because this key occurs more than once in the other file']];
   }));
  }
  if (!data.length) return null;

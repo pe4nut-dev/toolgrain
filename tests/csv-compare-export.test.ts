@@ -11,7 +11,8 @@ describe('CSV Compare exports',()=>{
  it('removed exports only old source rows',()=>{expect(roundtrip(setup().report('removed')!.csv).rows).toEqual([['2','Removed']]);});
  it('removed preserves old column order without metadata',()=>{expect(roundtrip(setup().report('removed')!.csv).headers).toEqual(['id','name']);});
  it('changed creates one row per changed field',()=>{const s=setup('id,name,city\n1,A,Berlin','id,name,city\n1,B,Bonn');expect(s.report('changed')!.rowCount).toBe(2);expect(roundtrip(s.report('changed')!.csv).headers).toEqual(['key','column','old_value','new_value']);});
- it('changed preserves original values and uses trimmed matching key',()=>{const s=setup('id,name\n 1 , A ','id,name\n1,B ');expect(roundtrip(s.report('changed')!.csv).rows).toEqual([['1','name',' A ','B ']]);});
+ it('changed preserves original values and uses original new-file key',()=>{const s=setup('id,name\n 1 , A ','id,name\n 1 ,B ');expect(roundtrip(s.report('changed')!.csv).rows).toEqual([[' 1 ','name',' A ','B ']]);});
+ it('key issue export retains each source key spelling',()=>{const s=setup('id,name\n 1 ,A\n1 ,B','id,name\n 1,C');expect(roundtrip(s.report('issues')!.csv).rows.map(r=>r[2])).toEqual([' 1 ',' 1']);});
  it('key issues use clear issue types',()=>{const s=setup('id,name\n1,A\n1,B','id,name\n2,C');expect(roundtrip(s.report('issues')!.csv).rows[0][0]).toBe('duplicate_key');});
  it('exports duplicate record numbers',()=>{const s=setup('id,name\n1,A','id,name\n1,B\n1,C');expect(roundtrip(s.report('issues')!.csv).rows.find(r=>r[1]==='new')?.[3]).toBe('2;3');});
  it('exports missing keys as empty with correct file',()=>{const s=setup('id,name\n,A','id,name\n1,B');expect(roundtrip(s.report('issues')!.csv).rows).toEqual([['missing_key','old','','2','Key value is empty']]);});
