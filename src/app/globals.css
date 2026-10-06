@@ -231,3 +231,11 @@ button:disabled { cursor: not-allowed; }
 .export-counts dd {margin:6px 0;font-weight:600;font-size:20px;}
 .crm-cleaning button:disabled {opacity:.45;cursor:not-allowed;}
 @media(max-width:600px){.review-records {grid-template-columns:1fr;}.cleaning-actions .button {width:100%;}.review-status {white-space:normal;}}
+
+.about-principles {display:grid;gap:28px;padding-left:22px;}
+.about-usp {position:relative;padding:28px 28px 28px 46px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(110deg,var(--paper),#fff 65%);}
+.about-usp-marker {position:absolute;left:-23px;top:25px;display:grid;place-items:center;width:46px;height:58px;color:var(--green);background:var(--paper);border:1px solid var(--line);border-radius:12px;}
+.about-usp-copy h2 {font-size:26px;margin-bottom:14px;}
+.about-usp-copy p {color:#66716a;line-height:1.85;}
+.about-usp-copy p:last-child {margin-bottom:0;}
+@media(max-width:600px){.about-principles {padding-left:18px;}.about-usp {padding:24px 18px 24px 34px;}.about-usp-marker {left:-19px;top:21px;width:38px;height:50px;border-radius:10px;}.about-usp-marker svg {width:30px;height:30px;}.about-usp-copy h2 {font-size:23px;}}

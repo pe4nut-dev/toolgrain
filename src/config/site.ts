@@ -4,6 +4,7 @@ export const siteConfig = {
   tagline: 'Small tools for annoying business tasks.',
   brandLine: 'One task. One tool. Done.',
   description: 'Focused browser tools for cleaning data, working with files and handling repetitive business tasks.',
+  contactEmail: 'info@toolgrain.com',
   socialLinks: [],
   navigation: [{ label: 'Tools', href: '/tools' }, { label: 'About', href: '/about' }],
 } as const;
