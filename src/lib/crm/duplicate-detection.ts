@@ -1,27 +1,36 @@
 import type { ParsedCsv } from '../csv/types';
 import type { FieldColumns } from './fields';
 import { firstValue } from './fields';
-import { normalizeCompany, normalizeIdentity } from './normalization';
+import { normalizeCompany, normalizeIdentity, normalizeGermanTextForComparison } from './normalization';
 import { emailProblem, normalizeEmail } from './email-analysis';
 import { normalizePhone } from './phone-analysis';
-import type { DuplicateGroup, DuplicateMatch, DuplicateReason } from './types';
+import type { DuplicateDetectionConfig, CustomKeyMatch, DuplicateGroup, DuplicateMatch, DuplicateReason } from './types';
 
-export function detectDuplicates(csv: ParsedCsv, fields: FieldColumns): DuplicateGroup[] {
+export function detectDuplicates(csv: ParsedCsv, fields: FieldColumns, config: DuplicateDetectionConfig = {}): DuplicateGroup[] {
+  const specific = config.mode === 'specific';
+  const selected = [...new Set(config.selectedColumns ?? [])].map(key => {
+    const column = csv.columns.find(column => column.key === key);
+    if (!column) throw new Error('Choose a valid duplicate key column.');
+    return column;
+  });
+  const keyValues = csv.rows.map(row => selected.map(column => (row[column.key] ?? '').trim()));
+  const eligible = (index:number) => !specific || (selected.length > 0 && keyValues[index].every(Boolean));
   const parents=csv.rows.map((_,index)=>index);
   function root(index:number):number { while(parents[index]!==index){parents[index]=parents[parents[index]];index=parents[index]}return index; }
   function union(a:number,b:number){const ra=root(a),rb=root(b);if(ra!==rb)parents[Math.max(ra,rb)]=Math.min(ra,rb);}
   const pairs=new Map<string,DuplicateMatch>();
-  function match(a:number,b:number,reason:DuplicateReason){
+  function match(a:number,b:number,reason:DuplicateReason,customKey?:CustomKeyMatch){
     if(a===b)return;
     const rows:[number,number]=[Math.min(a,b)+1,Math.max(a,b)+1];
     const key=rows.join(':');
     const existing=pairs.get(key);
-    if(existing){if(!existing.reasons.includes(reason))existing.reasons.push(reason)}else pairs.set(key,{rows,reasons:[reason]});
+    if(existing){if(!existing.reasons.includes(reason))existing.reasons.push(reason);if(customKey)existing.customKey=customKey}else pairs.set(key,{rows,reasons:[reason],...(customKey?{customKey}:{})});
     union(a,b);
   }
   const exactBuckets=new Map<string,number[]>();
   const fingerprints=csv.rows.map(row=>JSON.stringify(csv.columns.map(column=>(row[column.key]??'').trim())));
   csv.rows.forEach((row,index)=>{
+    if(!eligible(index))return;
     if(csv.columns.every(column=>!(row[column.key]??'').trim()))return;
     const bucket=exactBuckets.get(fingerprints[index]);
     if(bucket){match(bucket[0],index,'exact_values');bucket.push(index)}else exactBuckets.set(fingerprints[index],[index]);
@@ -33,7 +42,7 @@ export function detectDuplicates(csv: ParsedCsv, fields: FieldColumns): Duplicat
     if(first===undefined)index.set(value,row);
     else if(fingerprints[first]!==fingerprints[row])match(first,row,reason);
   }
-  csv.rows.forEach((row,index)=>{
+  if(!specific)csv.rows.forEach((row,index)=>{
     for(const column of fields.email){const value=normalizeEmail(row[column.key]??'');if(value&&!emailProblem(value))indexSignal(emailIndex,value,index,'email')}
     for(const column of fields.phone)indexSignal(phoneIndex,normalizePhone(row[column.key]??''),index,'phone');
     const first=normalizeIdentity(firstValue(row,fields.first_name));
@@ -43,6 +52,33 @@ export function detectDuplicates(csv: ParsedCsv, fields: FieldColumns): Duplicat
     const company=normalizeCompany(firstValue(row,fields.company));
     if(name&&company)indexSignal(identityIndex,JSON.stringify([name,company]),index,'name_company');
   });
+  if(specific){
+    const customIndex = new Map<string,number>();
+    csv.rows.forEach((_,index) => {
+      if(!eligible(index))return;
+      const key = JSON.stringify(keyValues[index].map(normalizeGermanTextForComparison));
+      const first = customIndex.get(key);
+      if(first === undefined)customIndex.set(key,index);
+      else {
+        match(first,index,'custom_key');
+        const pair = pairs.get([first+1,index+1].join(':'))!;
+        pair.textNormalized = true;
+        pair.selectedKey = selected.map((column,i) => ({columnKey:column.key,columnName:column.name,value:keyValues[index][i]}));
+      }
+    });
+  }
+  if(!specific && config.customKeyColumn){
+    const column=csv.columns.find(column=>column.key===config.customKeyColumn);
+    if(!column)throw new Error('Choose a valid duplicate key column.');
+    const customIndex=new Map<string,number>();
+    csv.rows.forEach((row,index)=>{
+      const value=(row[column.key]??'').trim();
+      if(!value)return;
+      const first=customIndex.get(value);
+      if(first===undefined)customIndex.set(value,index);
+      else match(first,index,'custom_key',{columnKey:column.key,columnName:column.name,value});
+    });
+  }
   const buckets=new Map<number,number[]>();
   csv.rows.forEach((_,index)=>{const key=root(index);const bucket=buckets.get(key);if(bucket)bucket.push(index+1);else buckets.set(key,[index+1])});
   const matchesByRoot=new Map<number,DuplicateMatch[]>();
@@ -55,5 +91,12 @@ export function detectDuplicates(csv: ParsedCsv, fields: FieldColumns): Duplicat
     rows,
     matches:matchesByRoot.get(key)??[],
     exactSubgroups:exactByRoot.get(key)??[],
+    ...(specific ? {
+      textNormalized: true,
+      selectedKey: selected.map((column,i) => ({columnKey:column.key,columnName:column.name,value:keyValues[rows[0]-1][i]})),
+      differences: csv.columns.filter(column => !selected.some(key => key.key === column.key))
+        .filter(column => rows.some(row => csv.rows[row-1][column.key] !== csv.rows[rows[0]-1][column.key]))
+        .map(column => ({columnKey:column.key,columnName:column.name,values:rows.map(row => ({row,value:csv.rows[row-1][column.key] ?? ''}))})),
+    } : {}),
   }));
 }

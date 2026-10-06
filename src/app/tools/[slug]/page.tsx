@@ -26,7 +26,8 @@ export default async function ToolPage({ params }: { params: Promise<{ slug: str
       </div>
     </div>
     <ToolWorkspace tool={tool} />
-    <section className="section"><SectionHeading title={tool.status === 'coming-soon' ? 'Planned workflow' : 'How it works'} description={tool.slug === 'crm-csv-cleaner' ? 'Analyze locally, apply safe fixes, review duplicates and download a cleaned copy.' : 'This tool is coming soon.'} /><ol className="steps">{tool.steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, '0')}</span><h3>{step}</h3></li>)}</ol></section>
+    <section className="section"><SectionHeading title={tool.status === 'coming-soon' ? 'Planned workflow' : 'How it works'} description={tool.slug === 'crm-csv-cleaner' ? 'Analyze locally, apply safe fixes, review duplicates and download a cleaned copy.' : tool.slug === 'csv-compare' ? 'Compare locally and inspect changes without uploading your CSV contents.' : 'This tool is coming soon.'} /><ol className="steps">{tool.steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, '0')}</span><h3>{step}</h3></li>)}</ol></section>
+    {tool.slug === 'csv-compare' && <p className="privacy-note">Need to clean a CSV before comparing it? <Link className="text-link" href="/tools/crm-csv-cleaner">{getTool('crm-csv-cleaner')!.name} →</Link></p>}
     <section className="section"><SectionHeading title="More tools for your workflow" /><ToolGrid items={getRelatedTools(tool)} /></section>
     <section className="faq section"><SectionHeading title="A few useful answers" />{tool.faqs.map(faq => <details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</section>
   </Container>;

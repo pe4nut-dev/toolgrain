@@ -1,22 +1,23 @@
 'use client';
+import { DuplicateDifferences } from './duplicate-differences';
 import { useMemo, useState } from 'react';
 import type { CsvRow } from '@/lib/csv/types';
 import type { CleaningSession } from '@/lib/crm/clean/types';
 import { applySafeFixes, undoSafeFixes, resetChanges } from '@/lib/crm/clean/apply-fixes';
 import { decideDuplicate, unreviewDuplicate } from '@/lib/crm/clean/duplicate-decisions';
 import { downloadCleanedCsv } from '@/lib/crm/clean/export-csv';
-import { duplicateReasons, issueDefinitions, type DuplicateGroup } from '@/lib/crm/types';
+import { duplicateMatchReasons, issueDefinitions, type DuplicateGroup } from '@/lib/crm/types';
 const number=new Intl.NumberFormat('en');
 type Props={session:CleaningSession;onChange:(session:CleaningSession)=>void;fileName:string};
 function ReviewGroup({group,session,onChange,values}:{group:DuplicateGroup;session:CleaningSession;onChange:Props['onChange'];values:ReadonlyMap<number,CsvRow>}){
  const [open,setOpen]=useState(false),[limit,setLimit]=useState(20);
  const decision=session.duplicateDecisions[group.id];
  const status=!decision?'Unreviewed':decision.kind==='keep_all'?'Keep all':'Keep row '+decision.row;
- const reasons=[...new Set(group.matches.flatMap(match=>match.reasons))];
+ const reasons=[...new Set(group.matches.flatMap(match=>duplicateMatchReasons(match)))];
  return <details className="duplicate-detail cleaning-group" onToggle={event=>setOpen(event.currentTarget.open)}>
  <summary><span>{group.kind==='exact'?'Exact':'Likely'} duplicate · Rows {group.rows.slice(0,5).join(', ')}{group.rows.length>5?' + '+(group.rows.length-5)+' more':''}</span><span className="review-status">{status}</span></summary>
  {open&&<div className="duplicate-body">
-  <p>{reasons.map(reason=>duplicateReasons[reason]).join(' ')}</p>
+  <p>{reasons.join(' ')}</p><DuplicateDifferences group={group}/>
   {group.kind==='likely'&&<p className="muted">These records are connected by matching pairs. Compare the records before choosing one to keep.</p>}
   {group.kind==='exact'&&<p className="muted">These rows appear to be identical. Suggested: keep the first row. All are kept until you choose.</p>}
   <div className="cleaning-actions"><button className="button secondary" type="button" onClick={()=>onChange(decideDuplicate(session,group.id,{kind:'keep_all'}))}>{group.rows.length===2?'Keep both':'Keep all'}</button>{decision&&<button className="report-more" type="button" onClick={()=>onChange(unreviewDuplicate(session,group.id))}>Mark unreviewed</button>}</div>

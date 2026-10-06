@@ -27,20 +27,33 @@ export type CrmIssue = {
   reason: string;
   duplicateGroupId?: string;
 };
-export type DuplicateReason = 'exact_values' | 'email' | 'phone' | 'name_company';
+export type DuplicateDetectionConfig = { mode?: 'automatic' | 'specific'; selectedColumns?: readonly string[]; customKeyColumn?: string; normalizeGermanText?: boolean };
+export type DuplicateReason = 'exact_values' | 'email' | 'phone' | 'name_company' | 'custom_key';
 export const duplicateReasons: Record<DuplicateReason,string> = {
+  custom_key:'Same non-empty value in the selected duplicate key column.',
   exact_values:'All column values match after trimming.',
   email:'Same email after trimming and case normalization.',
   phone:'Same phone after removing presentation separators. Country prefixes are not inferred.',
   name_company:'Same name and company after comparison normalization (spacing, transliteration and common company suffixes).',
 };
-export type DuplicateMatch = {rows:[number,number]; reasons:DuplicateReason[]};
+export type CustomKeyMatch = { columnKey: string; columnName: string; value: string };
+export type DuplicateMatch = {rows:[number,number]; reasons:DuplicateReason[]; customKey?: CustomKeyMatch; selectedKey?: CustomKeyMatch[]; textNormalized?: boolean};
+export function duplicateMatchReasons(match: DuplicateMatch): string[] {
+ return match.reasons.map(reason => reason === 'custom_key' && match.selectedKey
+  ? (match.textNormalized ? 'Same selected key after text normalization: ' : 'Same selected duplicate key: ') + match.selectedKey.map(part => part.columnName + ' = ' + part.value).join('; ')
+  : reason === 'custom_key' && match.customKey
+  ? 'Same value in selected duplicate key column "' + match.customKey.columnName + '". Value: ' + match.customKey.value
+  : duplicateReasons[reason]);
+}
 export type DuplicateGroup = {
   id:string;
   kind:'exact'|'likely';
   rows:number[];
   matches:DuplicateMatch[];
   exactSubgroups:number[][];
+  selectedKey?: CustomKeyMatch[];
+  textNormalized?: boolean;
+  differences?: {columnKey:string; columnName:string; values:{row:number; value:string}[]}[];
 };
 export type CrmAnalysis = {
   issues:CrmIssue[];

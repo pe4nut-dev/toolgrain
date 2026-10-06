@@ -1,0 +1,6 @@
+creditor,invoice,amount,address,E-Mail-Avis,E-Mail
+RICOH,224345040,596.60,Old,buchhaltung@avar,valid@example.com
+RICOH,224345040,790.00,New,other@example.com,another@example.com
+RICOH,224345040,800.00,Third,last@example.com,last2@example.com
+OTHER,224345040,596.60,Old,ok@example.com,ok2@example.com
+RICOH,,596.60,Old,ok3@example.com,ok4@example.com

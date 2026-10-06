@@ -3,7 +3,7 @@
 Small tools for annoying business tasks.
 
 Production domain: https://toolgrain.com
-Current available tool: CRM CSV Cleaner. Other registry tools are Coming Soon.
+Current available tools: CRM CSV Cleaner and CSV Compare. Other registry tools are Coming Soon.
 
 ## Stack and local setup
 
@@ -64,7 +64,7 @@ The legal pages contain the supplied operator details; deployment-specific legal
 
 ## Validation and limits
 
-92 Vitest tests and 14 parser checks cover analyzer and cleaning rules, immutable originals, duplicate decisions, undo/reset, column order, duplicate headers, Unicode, delimiter roundtrips and 10,000-row smoke tests. Cleaning has no arbitrary cell editing, merging, phone country inference or automatic invalid/missing-value correction. Historical phase reports are local development artifacts and are excluded from Git.
+199 Vitest tests and 14 parser checks cover analyzer and cleaning rules, immutable originals, duplicate decisions, undo/reset, column order, duplicate headers, Unicode, delimiter roundtrips and 10,000-row smoke tests. Cleaning has no arbitrary cell editing, merging, phone country inference or automatic invalid/missing-value correction. Historical phase reports are local development artifacts and are excluded from Git.
 
 ## First GitHub / Vercel deployment
 
@@ -107,3 +107,48 @@ Scope: application source, root layout/footer, public assets, configuration, man
 No non-essential browser storage/tracking found, so no cookie banner or consent logic was added. Normal browser resource caching and requested downloads are separate. Verify production response headers, cookies and injected scripts: Vercel platform integrations/protection can differ from repository code.
 
 Sources: [§ 5 DDG](https://www.gesetze-im-internet.de/ddg/__5.html), [GDPR](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679), [§ 25 TDDDG](https://www.gesetze-im-internet.de/ttdsg/__25.html), [Vercel privacy notice](https://vercel.com/legal/privacy-notice). Vercel's own notice does not replace contractual verification for this deployment.
+
+## CSV Compare — Phase 8.1
+
+Two single-file CSV dropzones reuse the generic parser and the existing local workspace. Each accepts UTF-8 CSV up to 10 MB. Comparison core lives in src/lib/csv-compare and is independent of React and CRM logic.
+
+Key values are trimmed and indexed with Maps; case and punctuation remain significant. A duplicate key in either file excludes every record for that key in both files, including a unique counterpart. Missing keys are grouped separately by file. Key issues counts issue groups; the UI also reports the total excluded rows. Record numbers count parsed records, including the header, rather than physical lines.
+
+Shared columns are paired by exact header name, regardless of order. Only shared non-key fields are compared as original strings. Columns unique to a file are schema changes, not changed records. Repeated headers cannot be paired safely and are disclosed separately and excluded from field comparison; key selections identify their column position. With no comparable fields, matched unique keys are unchanged and the UI explains that limitation.
+
+Results expose Added, Removed, Changed, Unchanged and Key issues, with initial batches of 50 and Show more. Changed details show only fields that differ. File selection/removal/replacement or a key change discards the old result. No uploads, API routes or browser persistence are implemented. Local comparison exports are documented in Phase 8.2 below. Single keys only; no fuzzy matching, normalization options or XLSX support. Key suggestions are optional and not implemented.
+
+26 comparison tests include a 10,000-row-per-file smoke test, key ambiguity, reordered schemas, exact value comparison, different delimiters and browser fixtures. Core classification uses O(n + m) key indexing/iteration plus shared-field comparisons for matched records.
+
+## CSV Compare — Phase 8.2 exports
+
+Four category downloads are generated on demand from the current comparison; replacing/removing either file or changing a key removes the result and its export controls. Empty categories are disabled and the export helper returns null. Export includes the full result, regardless of the preview limit. No ZIP, bulk downloads or unchanged-row export is included.
+
+- Added: original new-file columns/order and values, with no metadata.
+- Removed: original old-file columns/order and values, with no metadata.
+- Changed: key, column, old_value, new_value; one record per changed field. Matching key is trimmed; original field values are preserved.
+- Key issues: issue_type, file, key, record_numbers, details. One report record per file/group; record numbers are semicolon-separated. Missing keys use missing_key; duplicates use duplicate_key; a unique record blocked by an opposite-file duplicate uses ambiguous_key. The UI counts issue groups, so the CSV may contain more report records than that count.
+
+Export uses PapaParse unparse, UTF-8 BOM and CRLF record separators, preserving quoted delimiters, whitespace, empty cells, multiline strings and Unicode. Added/Changed/Key issues use the new delimiter; Removed uses the old delimiter. Comma, semicolon and tab are supported; other delimiters fall back to comma.
+
+Filename helper retains spaces, Unicode and multiple dots, strips a final .csv extension case-insensitively, removes path components and replaces filesystem-unsafe characters. Basenames are limited to 180 characters. Suffixes: -added.csv, -removed.csv, -changed.csv and -key-issues.csv. Empty basenames fall back to comparison.
+
+29 export tests cover source integrity, full-result generation, roundtrips, filenames and browser Blob/download-anchor lifecycle, including a 10,000-row export. Production-style browser checks cover the controls and responsive widths (375/768/desktop). Generated report bytes re-import successfully; the embedded browser does not expose a completed download event or saved file, so native-browser file saving remains a final smoke-test item.
+
+## CRM Cleaner — V0.2 duplicate keys and email validation
+
+Automatic remains the default and retains the existing exact/email/phone/name-company rules. Specific columns runs separately: choose any one or more headers in the checklist, identified by stable parser column keys (repeated names display their position). Each component uses the German text comparison described below, then is encoded as a JSON array and indexed in a Map. Punctuation, suffixes and leading zeros remain significant. A row missing any selected value is excluded; selecting no columns produces no duplicate groups.
+
+Rows sharing a complete selected key form one non-overlapping group, even if other values differ. Full rows matching after existing trim normalization remain exact; otherwise the group is likely with reason Same selected duplicate key. Original differing non-key fields and their row numbers appear in both the health report and cleaning review. Tables and match reasons use bounded previews with Show more. Grouping has linear row/key indexing plus per-column fingerprint/difference work, without all-pairs comparison.
+
+Changing mode or selected columns recomputes from the original CSV and creates a fresh cleaning session, resetting fixes, decisions and review UI. Replacing/removing a file resets to Automatic. All rows remain kept until an explicit Keep this row decision. Original values are never rewritten by detection. No fuzzy matching, numeric equivalence or suffix stripping is implemented. The legacy optional single-key analyzer configuration remains internally compatible; the UI uses only the two separate modes.
+
+Email validation independently recognizes normalized aliases email, e-mail, email_address, e-mail-adresse, email avis, e-mail avis, E-Mail-Avis, billing_email/billing email and contact_email/contact email (plus the existing mail alias). All recognized columns receive validation/capitalization checks; issues retain the originating header and stable column key. Automatic CRM semantic matching is unchanged. Header detection uses explicit aliases, so arbitrary additional email header names may require extending the list; email metadata such as email_status is excluded. No mailbox/deliverability verification occurs.
+
+32 new V0.2 tests cover composite keys, changed amount/address, exact subgroups, missing components, immutable original values, visible differences, mode/session resets, no automatic removal, 10,000-row bounded matching and multiple email aliases including invalid E-Mail-Avis beside a valid E-Mail. Together with 20 legacy custom-key regressions and the existing suites, 215 tests pass. No CSV contents are transmitted to a server or persisted in browser storage.
+
+### German spelling equivalence
+
+Specific columns always treats German umlaut spellings as equivalent. There is no checkbox; future language selection is not implemented yet. Each selected component is Unicode NFC-normalized, trimmed, lowercased, whitespace-collapsed and compared with ä/ö/ü/ß mapped to ae/oe/ue/ss. Punctuation, suffixes and leading zeros remain significant. This applies only to internal comparison keys; raw key values, row previews and exports retain original spelling. Automatic name/company comparison reuses the helper before its existing identity normalization; email and phone rules remain separate, and arbitrary IDs are not automatically transliterated. Location can be selected for comparison; location alone is not a new automatic duplicate signal.
+
+16 additional regressions cover German spellings, uppercase and decomposed Unicode, always-on selected-key behavior, automatic identity matching, separate email/ID handling, original/export integrity, match reasons and 10,000-row matching. All 215 tests, TypeScript, ESLint and production build pass.

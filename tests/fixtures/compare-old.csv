@@ -1,0 +1,7 @@
+old_id;name;city;legacy_status
+1;Example Ltd;Berlin;active
+2;Müller;東京;active
+3;Removed;Bonn;inactive
+4;Duplicate A;Köln;active
+ 4 ;Duplicate B;Köln;active
+;Missing;Hamburg;active

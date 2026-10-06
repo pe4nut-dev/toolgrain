@@ -1,0 +1,9 @@
+customer_id,reference,email,label
+ 224345040 ,ref-a,first@example.com,First
+224345040,ref-b,second@example.com,Second
+224322318,ref-c,third@example.com,Third
+224322318-1,ref-d,fourth@example.com,Fourth
+ABC,ref-e,fifth@example.com,Fifth
+abc,ref-f,sixth@example.com,Sixth
+,ref-g,seventh@example.com,Seventh
+   ,ref-h,eighth@example.com,Eighth

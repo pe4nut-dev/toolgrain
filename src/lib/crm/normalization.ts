@@ -1,8 +1,13 @@
 export function normalizeForComparison(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
+// Comparison only: compose decomposed umlauts before German spelling replacements.
+export function normalizeGermanTextForComparison(value: string): string {
+  return value.normalize('NFC').trim().toLowerCase().replace(/\s+/g, ' ')
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+}
 export function normalizeIdentity(value: string): string {
-  return normalizeForComparison(value).replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+  return normalizeGermanTextForComparison(value)
     .normalize('NFKD').replace(/\p{M}/gu,'').replace(/[^\p{L}\p{N}]/gu,'');
 }
 export function normalizeCompany(value: string): string {

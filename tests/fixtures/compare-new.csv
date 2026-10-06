@@ -1,0 +1,6 @@
+city,id,name,customer_segment
+berlin,1,Example GmbH,business
+東京,2,Müller,private
+Bremen,5,Added,private
+Köln,4,Ambiguous,business
+Hamburg,,Missing,private
