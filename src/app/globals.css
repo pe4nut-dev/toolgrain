@@ -293,3 +293,43 @@ button:disabled { cursor: not-allowed; }
 .changed-record-table td.changed-value { background: #e8f1e9; color: var(--ink); box-shadow: inset 3px 0 0 var(--green); }
 .changed-field-label { display: inline-block; margin-left: .6rem; font-size: 11px; font-weight: 600; color: var(--green); letter-spacing: normal; }
 .changed-record-table th[scope="row"] { font-weight: 600; }
+
+.shopify-mapping-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
+.shopify-mapping-grid label { display: grid; gap: 6px; min-width: 0; font-weight: 600; }
+.shopify-mapping-grid select { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--ink); font: inherit; }
+.shopify-handle-option { display: flex; align-items: center; gap: .5rem; margin: 16px 0; }
+@media(max-width:600px) { .shopify-mapping-grid { grid-template-columns: 1fr; } }
+
+.feedback-cta { display: flex; align-items: center; justify-content: space-between; gap: 24px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 24px; margin: 32px 0 48px; }
+.feedback-cta h2 { font-size: 20px; margin-bottom: 8px; }
+.feedback-cta p { margin-bottom: 6px; color: var(--muted); }
+.feedback-cta .feedback-hint { font-size: 12px; margin-bottom: 0; }
+.feedback-cta .button { flex-shrink: 0; }
+@media(max-width:600px) { .feedback-cta { align-items: flex-start; flex-direction: column; padding: 20px; } }
+
+.supplier-file-summary > .supplier-filename { grid-column: 1 / -1; min-width: 0; }
+.supplier-filename dd { font-size: 16px; white-space: normal; overflow-wrap: anywhere; word-break: normal; overflow: visible; text-overflow: clip; }
+.shopify-issue-summary { margin: 20px 0; }
+.shopify-output-issue.error { background: #fff0ee; box-shadow: inset 3px 0 0 #a13e34; }
+.shopify-output-issue.warning { background: #fff6e6; box-shadow: inset 3px 0 0 #946515; }
+.shopify-output-issue.suggestion { background: #edf4ed; box-shadow: inset 3px 0 0 var(--green); }
+.shopify-issue-trigger { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; width: 100%; border: 0; padding: 3px; background: transparent; text-align: left; font: inherit; color: var(--ink); white-space: pre-wrap; }
+.shopify-issue-trigger svg { flex-shrink: 0; margin-top: 3px; }
+.shopify-issue-trigger.error svg { color: #a13e34; }
+.shopify-issue-trigger.warning svg { color: #80560e; }
+.shopify-issue-trigger.suggestion svg { color: var(--green); }
+.shopify-issue-popover { position: fixed; z-index: 100; width: min(340px,calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto; background: white; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 14px; box-shadow: 0 6px 24px #202c2926; font-size: 13px; pointer-events: auto; overflow-wrap: anywhere; }
+.shopify-issue-popover p { margin: 8px 0 0; }
+
+/* Keep screen-reader descriptions inside the scrolling preview. */
+.shopify-output-table { position: relative; }
+
+.shopify-cell-editor { min-width: 220px; max-width: 300px; white-space: normal; }
+.shopify-cell-editor label { display: grid; gap: 6px; font-weight: 600; }
+.shopify-cell-editor input { width: 100%; min-width: 0; padding: 8px; border: 1px solid var(--green); border-radius: 5px; background: white; }
+.shopify-cell-editor p { font-size: 12px; margin: 8px 0; }
+.shopify-edit-button { border: 0; background: transparent; color: var(--green); font-size: 11px; display: block; padding: 4px 0; }
+
+.shopify-editor-actions { display: flex; gap: 4px; margin-top: 6px; }
+.shopify-editor-actions button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); padding: 6px; }
+.shopify-editor-actions button:hover { background: #202c2909; color: var(--green); }

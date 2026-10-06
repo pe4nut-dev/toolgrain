@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { siteConfig } from '@/config/site';
 import { Header } from '@/components/layout/header';
+import { SiteFeedbackCTA } from '@/components/layout/feedback-cta';
 import { Footer } from '@/components/layout/footer';
 export const metadata: Metadata = {
  applicationName:siteConfig.name,
@@ -14,4 +15,4 @@ export const metadata: Metadata = {
 };
 export default function RootLayout({ children }: {
     children: React.ReactNode;
-}) { return <html lang="en"><body><a className="skip-link" href="#main">Skip to content</a><Header /><main id="main">{children}</main><Footer /></body></html>; }
+}) { return <html lang="en"><body><a className="skip-link" href="#main">Skip to content</a><Header /><main id="main">{children}<SiteFeedbackCTA /></main><Footer /></body></html>; }

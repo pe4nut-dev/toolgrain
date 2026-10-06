@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { Wrench } from 'lucide-react';
 import type { Tool } from '@/lib/tools';
+import { SupplierCSVToShopify } from './apps/supplier-csv-to-shopify';
 import { CSVCompare } from './apps/csv-compare';
 import { CRMCSVCleaner } from './apps/crm-csv-cleaner';
 // Server-side mapping keeps client component references out of tool metadata.
@@ -8,6 +9,7 @@ import { CRMCSVCleaner } from './apps/crm-csv-cleaner';
 const toolComponents: Partial<Record<string, ComponentType>> = {
   'crm-csv-cleaner': CRMCSVCleaner,
   'csv-compare': CSVCompare,
+  'supplier-csv-to-shopify': SupplierCSVToShopify,
 };
 export function ToolWorkspace({ tool }: { tool: Tool }) {
   const Component = toolComponents[tool.slug];
