@@ -79,7 +79,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
 .file-dropzone:focus-within { outline: 2px solid #31674e; outline-offset: 4px; }
 .file-dropzone.is-disabled { opacity: .65; }
 .upload-icon { width: 48px; height: 48px; display: grid; place-items: center; background: #edf2e7; color: #4b6b3f; border-radius: 10px; margin-bottom: 16px; }
-.file-dropzone h3 { font-size: 18px; margin-bottom: 8px; }
+.file-dropzone h2 { font-size: 18px; margin-bottom: 8px; }
 .dropzone-or { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
 .dropzone-help { color: var(--muted); font-size: 12px; margin: 15px 0 0; }
 .file-error { display: flex; gap: 8px; align-items: flex-start; padding: 13px 15px; background: #fbefed; border: 1px solid #e9c6c0; border-radius: 7px; color: #943c32; font-size: 13px; margin: 16px 0 0; }
@@ -287,3 +287,5 @@ button:disabled { cursor: not-allowed; }
 .duplicate-key-columns legend { margin-bottom: .75rem; font-weight: 600; }
 .duplicate-key-columns label { display: flex; align-items: center; gap: .5rem; overflow-wrap: anywhere; min-width: 0; }
 .duplicate-key-columns input { accent-color: var(--accent); flex-shrink: 0; }
+
+.dropzone-title { font-size: 17px; }

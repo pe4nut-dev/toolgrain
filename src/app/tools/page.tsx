@@ -2,7 +2,7 @@ import { pageMetadata } from '@/config/metadata';
 import { Container } from '@/components/ui/shared';
 import { ToolDirectory } from '@/components/tools/tool-directory';
 
-export const metadata = pageMetadata('Explore tools','Browse focused tools for data, ecommerce, documents and repetitive business tasks. Start with the CRM CSV Cleaner.','/tools');
+export const metadata = pageMetadata('Business Tools for Data, CSV Files & Repetitive Tasks | Toolgrain','Explore focused Toolgrain utilities for CSV cleanup, file comparison, ecommerce data, documents and everyday business tasks.','/tools');
 
 export default async function Tools({ searchParams }: { searchParams: Promise<{ category?: string | string[] }> }) {
   const params = await searchParams;

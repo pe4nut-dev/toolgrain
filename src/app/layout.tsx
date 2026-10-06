@@ -4,11 +4,12 @@ import { siteConfig } from '@/config/site';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 export const metadata: Metadata = {
+ applicationName:siteConfig.name,
  metadataBase:new URL(siteConfig.url),
  title:{default:siteConfig.name+' – '+siteConfig.tagline.replace(/\.$/,''),template:'%s – '+siteConfig.name},
  description:siteConfig.description,
  alternates:{canonical:siteConfig.url},
- openGraph:{type:'website',siteName:siteConfig.name,title:siteConfig.name+' – '+siteConfig.tagline.replace(/\.$/,''),description:siteConfig.description,url:siteConfig.url},
+ openGraph:{locale:'en_US',type:'website',siteName:siteConfig.name,title:siteConfig.name+' – '+siteConfig.tagline.replace(/\.$/,''),description:siteConfig.description,url:siteConfig.url},
  robots:{index:true,follow:true},
 };
 export default function RootLayout({ children }: {

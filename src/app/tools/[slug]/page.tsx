@@ -1,3 +1,4 @@
+import { JsonLd, faqStructuredData } from '@/components/seo/json-ld';
 import type { Metadata } from 'next';
 import { pageMetadata } from '@/config/metadata';
 import Link from 'next/link';
@@ -10,7 +11,7 @@ import { ToolWorkspace } from '@/components/tools/tool-workspace';
 export function generateStaticParams() { return tools.map(tool => ({ slug: tool.slug })); }
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const tool = getTool((await params).slug);
-  return tool ? pageMetadata(tool.name,tool.shortDescription,'/tools/'+tool.slug,tool.status!=='coming-soon') : { title: 'Tool not found', robots:{index:false,follow:true} };
+  return tool ? pageMetadata(tool.seo?.title??tool.name,tool.seo?.description??tool.shortDescription,'/tools/'+tool.slug,tool.status!=='coming-soon') : { title: 'Tool not found', robots:{index:false,follow:true} };
 }
 export default async function ToolPage({ params }: { params: Promise<{ slug: string }> }) {
   const tool = getTool((await params).slug);
@@ -27,7 +28,7 @@ export default async function ToolPage({ params }: { params: Promise<{ slug: str
     </div>
     <ToolWorkspace tool={tool} />
     <section className="section"><SectionHeading title={tool.status === 'coming-soon' ? 'Planned workflow' : 'How it works'} description={tool.slug === 'crm-csv-cleaner' ? 'Analyze locally, apply safe fixes, review duplicates and download a cleaned copy.' : tool.slug === 'csv-compare' ? 'Compare locally and inspect changes without uploading your CSV contents.' : 'This tool is coming soon.'} /><ol className="steps">{tool.steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, '0')}</span><h3>{step}</h3></li>)}</ol></section>
-    {tool.slug === 'csv-compare' && <p className="privacy-note">Need to clean a CSV before comparing it? <Link className="text-link" href="/tools/crm-csv-cleaner">{getTool('crm-csv-cleaner')!.name} →</Link></p>}
+    {tool.seo && <><section className="section"><SectionHeading title={'What does '+tool.name+' do?'}/><p>{tool.seo.overview}</p><h3>Common use cases</h3><ul>{tool.seo.useCases.map(item=><li key={item}>{item}</li>)}</ul></section><p className="privacy-note">{tool.seo.relatedPrompt} <Link className="text-link" href={'/tools/'+tool.seo.relatedSlug}>{getTool(tool.seo.relatedSlug)!.name} →</Link></p><JsonLd data={faqStructuredData(tool.faqs)}/></>}
     <section className="section"><SectionHeading title="More tools for your workflow" /><ToolGrid items={getRelatedTools(tool)} /></section>
     <section className="faq section"><SectionHeading title="A few useful answers" />{tool.faqs.map(faq => <details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</section>
   </Container>;

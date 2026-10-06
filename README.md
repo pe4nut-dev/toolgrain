@@ -152,3 +152,15 @@ Email validation independently recognizes normalized aliases email, e-mail, emai
 Specific columns always treats German umlaut spellings as equivalent. There is no checkbox; future language selection is not implemented yet. Each selected component is Unicode NFC-normalized, trimmed, lowercased, whitespace-collapsed and compared with ä/ö/ü/ß mapped to ae/oe/ue/ss. Punctuation, suffixes and leading zeros remain significant. This applies only to internal comparison keys; raw key values, row previews and exports retain original spelling. Automatic name/company comparison reuses the helper before its existing identity normalization; email and phone rules remain separate, and arbitrary IDs are not automatically transliterated. Location can be selected for comparison; location alone is not a new automatic duplicate signal.
 
 16 additional regressions cover German spellings, uppercase and decomposed Unicode, always-on selected-key behavior, automatic identity matching, separate email/ID handling, original/export integrity, match reasons and 10,000-row matching. All 215 tests, TypeScript, ESLint and production build pass.
+
+## SEO
+
+Production domain: https://toolgrain.com
+Sitemap: https://toolgrain.com/sitemap.xml
+Robots: https://toolgrain.com/robots.txt
+
+Important indexed routes: /, /tools, /tools/crm-csv-cleaner, /tools/csv-compare and /about. Privacy and imprint are also indexable and included in the sitemap. Available tool URLs come from the central registry. Coming Soon pages remain public but are thin planned-workflow placeholders, so they stay noindex/follow and excluded from the sitemap.
+
+Every route owns its canonical and Open Graph URL. Available tools have static explanations, use cases, reciprocal links and visible FAQs. FAQPage JSON-LD uses exactly the same registry FAQs; the homepage includes minimal WebSite data without SearchAction. SoftwareApplication data is omitted to keep this phase minimal and avoid implying ratings, pricing or offers. No analytics/tracking is added.
+
+Google Search Console is configured externally. After deploying these code changes, submit or refresh the sitemap in Search Console and inspect the homepage and available-tool URLs. Check deployed canonicals, crawling and structured data; indexing and rich-result eligibility are controlled by search engines.

@@ -1,6 +1,6 @@
 import { pageMetadata } from '@/config/metadata';
 import { Container } from '@/components/ui/shared';
-export const metadata = pageMetadata('Legal notice', 'Operator and contact information for Toolgrain.', '/imprint', false);
+export const metadata = pageMetadata('Legal Notice / Imprint | Toolgrain', 'Operator and contact information for Toolgrain.', '/imprint');
 // Owner details supplied by the operator; any future placeholders MUST be completed before launch.
 // Add only applicable § 5 DDG disclosures; never invent optional identifiers or contact details.
 export default function Page() {

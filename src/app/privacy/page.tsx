@@ -1,6 +1,6 @@
 import { pageMetadata } from '@/config/metadata';
 import { Container } from '@/components/ui/shared';
-export const metadata = pageMetadata('Privacy', 'Website requests, local CSV processing and email contact.', '/privacy', false);
+export const metadata = pageMetadata('Privacy Policy | Toolgrain', 'Website requests, local CSV processing and email contact.', '/privacy');
 // Owner details supplied by the operator. Verify hosting/email setup,
 // retention criteria and contractual transfer safeguards before launch.
 export default function Page() {

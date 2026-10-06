@@ -52,7 +52,7 @@ export function FileDropzone({ acceptedTypes, multiple = false, maxFileSize, fil
       onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDrop={onDrop}
       onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = disabled ? 'none' : 'copy'; }}>
       <span className="upload-icon"><Upload size={24} aria-hidden="true" /></span>
-      <h3>{dragOver && !disabled ? 'Drop to select your file' : title}</h3>
+      <h2 className="dropzone-title">{dragOver && !disabled ? 'Drop to select your file' : title}</h2>
       <span className="dropzone-or">or</span>
       <button type="button" className="button secondary" autoFocus={focusOnMount} disabled={disabled} aria-describedby={helpId + (error ? ' ' + errorId : '')} onClick={() => inputRef.current?.click()}>Choose {multiple ? 'files' : 'file'}</button>
       <input ref={inputRef} type="file" hidden aria-label={multiple ? 'Choose files' : 'Choose file'} accept={acceptedTypes.join(',')} multiple={multiple} disabled={disabled}
