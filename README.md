@@ -83,7 +83,7 @@ Production canonicals remain fixed at https://toolgrain.com, including on previe
 **Owner details have been populated using information supplied by the operator. No owner placeholders remain. Any future placeholders MUST be completed before launch. These pages are not legally certified.**
 
 - [x] Replace controller placeholders with the supplied name, postal address and email.
-- [x] Replace imprint placeholders with the supplied operator details: YANNICK KROLL, HOLZER WEG 11, 58708 MENDEN, DEUTSCHLAND; info@toolgrain.com.
+- [x] Replace imprint placeholders with the supplied operator details
 - [ ] Check legal form and additional applicable § 5 DDG details: representation, register, VAT/business identification number, licensing authority or regulated profession. Add only applicable verified fields; no empty optional fields or invented telephone number. Verify contact arrangements allow the required direct communication.
 - [ ] Verify hosting plan supports commercial use. [Vercel Hobby](https://vercel.com/docs/plans/hobby) is limited to non-commercial personal use; confirm the actual subscription.
 - [ ] Verify Vercel contractual/privacy setup: applicable processing terms, provider/subprocessor roles, enabled integrations/security features, locations, actual log categories/retention and international-transfer safeguards. No account-specific DPA or exact transfer mechanism has been verified.
