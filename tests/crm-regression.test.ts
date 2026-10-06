@@ -1,0 +1,19 @@
+import { describe, expect, it } from 'vitest';
+import { referenceRows } from './fixtures/reference-crm';
+import { analyzeCrm } from '../src/lib/crm/analyze-crm';
+import { detectColumns } from '../src/lib/csv/detect-columns';
+import { isMissingValue } from '../src/lib/crm/fields';
+import type { ParsedCsv } from '../src/lib/csv/types';
+function analyze(rows:Record<string,string>[]){const columns=Object.keys(rows[0]).map(key=>({key,name:key}));const csv:ParsedCsv={columns,rows,delimiter:',',warnings:[]};return analyzeCrm(csv,detectColumns(columns))}
+describe('Phase 5 reference regression',()=>{
+ it('invalid email is present, not missing',()=>{const report=analyze([{email:'tim.richter@@example.com'},{email:'sophie.weber@exampl'}]);expect(report.counts.invalid_email).toBe(2);expect(report.counts.missing_email).toBe(0)});
+ it('empty and whitespace emails are missing, not invalid',()=>{const report=analyze([{email:''},{email:'  '}]);expect(report.counts.missing_email).toBe(2);expect(report.counts.invalid_email).toBe(0)});
+ it.each([undefined,null,'','   '])('only absence or blank is missing: %s',value=>expect(isMissingValue(value)).toBe(true));
+ it.each(['invalid@@email','unknown','0'])('present value is never missing: %s',value=>expect(isMissingValue(value)).toBe(false));
+ it('email trim/case matches even with different company and name',()=>{const report=analyze([{first_name:'Max',company:'A',email:' MAX.WOLF@EXAMPLE.COM '},{first_name:'Maximilian',company:'B',email:'max.wolf@example.com'}]);expect(report.duplicateGroups).toHaveLength(1);expect(report.duplicateGroups[0]).toMatchObject({kind:'likely',rows:[1,2],matches:[{rows:[1,2],reasons:['email']}]})});
+ it('three nonadjacent same-email contacts form one group',()=>{const report=analyze([{id:'1',email:'shared@example.com'},{id:'2',email:'other@example.com'},{id:'3',email:'SHARED@example.com'},{id:'4',email:'shared@example.com'}]);expect(report.duplicateGroups).toHaveLength(1);expect(report.duplicateGroups[0].rows).toEqual([1,3,4]);expect(report.duplicateGroups[0].matches).toHaveLength(2)});
+ it('reference counts contain 20 contacts, 2 invalid and exactly 3 missing values',()=>{const report=analyze(referenceRows);expect(report.contacts).toBe(20);expect(report.counts).toMatchObject({invalid_email:2,missing_company:1,missing_location:1,missing_phone:1,missing_email:0});expect(report.counts.missing_company+report.counts.missing_location+report.counts.missing_phone+report.counts.missing_email).toBe(3);expect(report.issues.filter(i=>i.type==='invalid_email').map(i=>i.originalValues[0].value).sort()).toEqual(['sophie.weber@exampl','tim.richter@@example.com'])});
+ it('finds all seven required email groups and the optional Sophie identity group',()=>{const report=analyze(referenceRows);expect(report.duplicateGroups).toHaveLength(8);for(const rows of [[1,2],[3,4],[10,11],[12,13],[14,15],[17,18],[19,20]]){const group=report.duplicateGroups.find(g=>JSON.stringify(g.rows)===JSON.stringify(rows));expect(group).toBeDefined();if(rows[0]!==17){expect(group?.kind).toBe('likely');expect(group?.matches.some(m=>m.reasons.includes('email'))).toBe(true)}}expect(report.duplicateGroups.find(g=>g.rows[0]===5)?.matches[0].reasons).toContain('name_company')});
+ it('classifies Nina data rows 17 and 18 as exact without counting the header',()=>{expect(analyze(referenceRows).duplicateGroups.find(g=>g.rows[0]===17)).toMatchObject({kind:'exact',rows:[17,18],exactSubgroups:[[17,18]]})});
+ it('never modifies the reference original values',()=>{const rows=referenceRows.map(row=>Object.freeze({...row}));Object.freeze(rows);const before=JSON.stringify(rows);analyze(rows);expect(JSON.stringify(rows)).toBe(before);expect(rows[0].email).toBe('ANNA.MUELLER@EXAMPLE.COM');expect(rows[10].email).toBe('EMILY.KOCH@EXAMPLE.COM')});
+});

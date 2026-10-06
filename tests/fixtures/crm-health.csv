@@ -1,0 +1,21 @@
+first_name,last_name,company,email,phone,location
+Anna,Müller,Nordlicht GmbH,ANNA.MUELLER@EXAMPLE.COM,+49 (211) 555-0198,Düsseldorf
+anna,müller,Nordlicht GmbH,anna.mueller@example.com,+492115550198,Düsseldorf
+Jonas,Schmidt,MarketFox,jonas.schmidt@example.com,+49 30 1234567,Berlin
+Jonas,Schmidt,Andere Firma,jonas.schmidt@example.com,+49 30 1234568,Berlin
+Sophie,Weber,Klarblick Media,sophie.weber@example.com,+49 30 3330005,Berlin
+Sophie,Weber,Klarblick Media,sophie.weber@exampl,+49 30 3330006,Berlin
+Lukas,Becker,,lukas.becker@example.com,+49 221 3330007,Köln
+Lea,Schulz,Cedar,lea.schulz@example.com,+49 351 3330008,
+Ben,Wolf,Birch,ben.wolf@example.com,,Bonn
+Emily,Koch,Vertex,emily.koch@example.com,+49 89 3330010,München
+Emily,Koch,Vertex GmbH,EMILY.KOCH@EXAMPLE.COM,+49 89 3330011,München
+David,Fischer,Oak,david.fischer@example.com,+49 421 3330012,Bremen
+David,Fischer,Oak,david.fischer@example.com,+49 421 3330013,Bremen
+Laura,Neumann,Willow,laura.neumann@example.com,+49 431 3330014,Kiel
+Laura,Neumann,Willow,laura.neumann@example.com,+49 431 3330015,Kiel
+Tim,Richter,Maple,tim.richter@@example.com,+49 231 3330016,Dortmund
+Nina,Klein,Alpine Works,nina.klein@example.com,+49 711 3330017,Stuttgart
+Nina,Klein,Alpine Works,nina.klein@example.com,+49 711 3330017,Stuttgart
+Max,Wolf,Spruce,max.wolf@example.com,+49 341 3330019,Leipzig
+Maximilian,Wolf,Spruce,max.wolf@example.com,+49 341 3330020,Leipzig

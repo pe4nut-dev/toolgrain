@@ -1,0 +1,4 @@
+import { pageMetadata } from '@/config/metadata';
+import { Container } from '@/components/ui/shared';
+export const metadata=pageMetadata('Legal notice','Legal notice details must be completed before public launch.','/imprint',false);
+export default function Page(){return <Container className="page-section prose-page"><p className="eyebrow">LEGAL NOTICE</p><h1 className="page-title">Imprint / Legal notice</h1><div className="notice"><strong>Legal details required before public launch.</strong><p>This page is incomplete and is not a final legal document. All placeholders must be replaced before public production launch.</p></div><dl className="legal-details"><dt>Legal name</dt><dd>[Legal name]</dd><dt>Address</dt><dd>[Address]</dd><dt>Contact email</dt><dd>[Contact email]</dd></dl><p>Complete the operator details and any additional applicable legal information before public launch.</p></Container>}

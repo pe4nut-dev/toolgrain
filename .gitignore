@@ -1,0 +1,33 @@
+# Dependencies and Next.js build output
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment files and credentials
+.env*
+*.pem
+*.key
+
+# Hosting, logs and OS artifacts
+.vercel/
+*.log
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local exports and scratch files (retain synthetic regression fixtures)
+*.csv
+*.tsv
+!tests/fixtures/**/*.csv
+!tests/fixtures/**/*.tsv
+/work/
+/tmp/
+/downloads/
+/exports/
+
+# Local development/phase reports
+/PHASE*.md
+/VALIDATION.md
