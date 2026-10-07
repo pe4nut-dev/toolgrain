@@ -19,12 +19,11 @@ create table if not exists public.billing_email_events (
 alter table public.billing_email_events enable row level security;
 revoke all on public.billing_email_events from public,anon,authenticated;
 grant select,update on public.billing_email_events to service_role;
--- Queue in the same transaction as the entitlement transition, not after a redirect.
+-- Queue when the resulting billing row is complete; separate updates are supported.
 create or replace function public.queue_pro_activation_email() returns trigger
 language plpgsql security definer set search_path='' as $$
 begin
- if new.plan='pro' and new.stripe_subscription_id is not null and new.stripe_price_id is not null
- and (old.plan is distinct from 'pro' or old.stripe_subscription_id is distinct from new.stripe_subscription_id) then
+ if new.plan='pro' and new.stripe_subscription_id is not null and new.stripe_price_id is not null then
   insert into public.billing_email_events(user_id,stripe_subscription_id,stripe_price_id,subscription_current_period_end)
   values(new.id,new.stripe_subscription_id,new.stripe_price_id,new.subscription_current_period_end)
   on conflict(stripe_subscription_id,email_type) do nothing;
@@ -37,7 +36,7 @@ exception when others then
 end;$$;
 revoke all on function public.queue_pro_activation_email() from public,anon,authenticated;
 drop trigger if exists toolgrain_queue_pro_activation_email on public.profiles;
-create trigger toolgrain_queue_pro_activation_email after update of plan,stripe_subscription_id on public.profiles
+create trigger toolgrain_queue_pro_activation_email after update of plan,stripe_subscription_id,stripe_price_id,subscription_current_period_end on public.profiles
 for each row execute function public.queue_pro_activation_email();
 -- One persistent claim before SMTP. Never automatically re-claim an ambiguous sending/failed row.
 create or replace function public.claim_pro_activation_email(p_user uuid,p_subscription text,p_event text,p_live boolean)
