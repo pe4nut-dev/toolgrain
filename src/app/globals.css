@@ -402,3 +402,6 @@ button:disabled { cursor: not-allowed; }
 .brand-logo img { flex-shrink: 0; object-fit: contain; }
 .brand-wordmark { font-family: var(--font-brand), sans-serif; font-weight: 800; color: #111; }
 .auth-brand { margin-bottom: 20px; font-size: 18px; }
+
+.billing-actions { display: grid; gap: 10px; }
+.billing-actions [role=alert] { color: #904537; }

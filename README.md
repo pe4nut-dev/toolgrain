@@ -222,7 +222,7 @@ Plans, prices and limits live in `src/config/plans.ts`. `src/lib/entitlements/in
 
 Row counts exclude the header and use the existing CSV parser’s data-row semantics. Byte limits retain the existing 1 MB = 1024² bytes convention. Exact limits are allowed. Files above row limits may be parsed locally for their counts; CRM analysis, comparison and supplier mapping/transformation are stopped. Files above size limits are rejected before parsing, with separate plan-limit and maximum-supported-limit messaging. Under-limit Free workflows include full results, review and exports.
 
-Pricing uses central €8.90/month and €69.00/year values. Pro is coming soon; no checkout or payment details are implemented. Accounts are prepared in Phase 11.3 below. `/pricing` is indexable and in the sitemap. UpgradePrompt is reused across tools and states clearly that purchases are not available. Re-run privacy/legal review when Auth or payments are actually introduced.
+Pricing uses central €8.90/month and €69.00/year values. Stripe Checkout and Portal are implemented in Phase 11.4 below; enabling purchases requires its setup. Accounts use Phase 11.3. `/pricing` is indexable and in the sitemap. UpgradePrompt is reused across tools and links to pricing. Re-run privacy/legal review when Auth or payments are actually introduced.
 
 ## Supabase accounts (Phase 11.3)
 
@@ -246,7 +246,7 @@ Status: integration and reproducible setup are prepared; a Supabase project must
 
 ### Account and entitlement boundary
 
-Supabase manages auth.users. public.profiles contains id, email, plan, created_at and updated_at. Its Auth ID has cascading deletion. Database triggers create/backfill Free profiles and synchronize email changes; signup metadata cannot set plan. RLS allows authenticated users to read their own profile only. No client INSERT/UPDATE/DELETE grants or policies exist. Browser users cannot promote themselves. No Stripe fields or values are invented; future trusted webhooks can write plan through a privileged backend. Limits remain exclusively in src/config/plans.ts.
+Supabase manages auth.users. public.profiles contains id, email, plan, created_at and updated_at. Its Auth ID has cascading deletion. Database triggers create/backfill Free profiles and synchronize email changes; signup metadata cannot set plan. RLS allows authenticated users to read their own profile only. No client INSERT/UPDATE/DELETE grants or policies exist. Browser users cannot promote themselves. Phase 11.4 adds verified Stripe billing metadata and webhook-only entitlement writes. Limits remain exclusively in src/config/plans.ts.
 
 Server rendering verifies the user with getUser and reads their own RLS-protected profile. Missing/error profiles fall back to Free. A read-only AccountProvider passes the verified plan to local tools. Pages render dynamically; authentication responses use private/no-store headers to prevent cross-user session/plan caching. Proxy refreshes cookies with getClaims and preserves refreshed cookies/cache headers. Authorization never trusts unverified getSession, user metadata, cookie plan fields, query switches or browser storage.
 
@@ -258,7 +258,7 @@ Configured Supabase SSR persists essential access/refresh sessions and PKCE veri
 
 Only account/auth metadata reaches Supabase. No Storage uploads, tool-data inserts or saved file histories. CSV analysis, comparison, corrections and exports remain in browser memory/downloads, including when signed in. The privacy policy distinguishes those boundaries without inventing a project region, retention period or transfer mechanism.
 
-The same Supabase project can later host feedback tickets. No ticket system/schema is built now and the existing mailto flow is unchanged. Stripe, billing controls, social login, password-recovery UI and account self-deletion UI are outside this phase. Users can contact the controller for account/data requests. Complete live signup, confirmation, magic link, login, account, signout and network/privacy checks after setup. Mocked tests do not certify a deployed database’s RLS.
+The same Supabase project can later host feedback tickets. No ticket system/schema is built now and the existing mailto flow is unchanged. Stripe billing is implemented in Phase 11.4 below. Social login, password-recovery UI and account self-deletion UI remain outside this phase. Users can contact the controller for account/data requests. Complete live signup, confirmation, magic link, login, account, signout and network/privacy checks after setup. Mocked tests do not certify a deployed database’s RLS.
 
 ## Vercel Web Analytics
 
@@ -269,3 +269,32 @@ Installed @vercel/analytics with the Next.js component in the root layout. Only 
 BrandLogo centralizes the supplied T/grain mark and live Toolgrain wordmark for header, footer and auth/account pages. Manrope ExtraBold (800) is self-hosted by next/font/google at build time; no runtime Google Fonts request. Manrope is licensed under SIL Open Font License 1.1. Body typography and UI colors are unchanged.
 
 Email templates can use https://toolgrain.com/brand/toolgrain-logo.png at 150–180px width. Mark-only: https://toolgrain.com/brand/toolgrain-mark.png. The legacy /toolgrain-logo.png URL now uses the new mark. Next.js icon.png and apple-icon.png replace the old boxes SVG. Assets are static and do not require authentication. Crops and proportional resizing come from the supplied transparent PNG, without redrawing or recoloring.
+
+## Stripe subscriptions (Phase 11.4)
+
+Stripe Checkout and Customer Portal run server-side. Only verified webhooks write entitlement, never Checkout redirects. Stripe SDK retrieves current subscriptions after taking a per-account database lease; repeated deliveries produce the same snapshot. Locks and conditional writes prevent delayed workers overwriting a later handler. Customer IDs are unique, customer creation uses a user-based Stripe idempotency key, and Checkout reuses open sessions; switching cycles expires the old open session. Existing non-terminal subscriptions block another purchase. Interrupted customer creation should be reconciled if recovery occurs after Stripe's idempotency retention window.
+
+Apply supabase/migrations/202610070001_billing.sql after the account migration. It adds five billing metadata fields and a private billing_locks table. Existing read-own RLS remains; browser roles have no INSERT/UPDATE/DELETE access. Only service_role can invoke billing RPCs. Lease lifetime is 120 seconds; expired writes fail and webhooks return 503 for retry. Events are not recorded as permanently processed before successful application. No card data, invoices or tool files are stored.
+
+Entitlement: active, trialing and past_due -> Pro only for a single quantity-one item using an approved price. canceled, unpaid, incomplete_expired, incomplete, paused and unknown statuses -> Free. cancel_at_period_end alone does not revoke access. Configure Stripe retry/grace behavior: past_due currently retains Pro for as long as Stripe keeps that status. Multiple subscriptions are reconciled with an entitled known-price subscription taking priority, then latest creation date. Unknown prices never grant Pro and emit a generic warning.
+
+Environment variables (server-only): STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY, STRIPE_PRO_MONTHLY_PRICE_ID, STRIPE_PRO_ANNUAL_PRICE_ID. The Supabase project URL is the existing NEXT_PUBLIC_SUPABASE_URL. Never prefix secrets with NEXT_PUBLIC. No browser Stripe key is required. Missing configuration disables billing without breaking Free tools. The supplied local Price IDs are monthly price_1UNorg41ZMMeqOxpnEuLDPRT and annual price_1UNozg41ZMMeqOxpbrFY5JAQ; confirm their test/live mode and currency before use. The server validates active recurring EUR prices: 890 cents every month and 6900 cents every year.
+
+Dashboard setup:
+
+1. In Stripe Test Mode create Toolgrain Pro with recurring €8.90/month and €69.00/year prices (no trials or coupons). Use matching-mode price/key values.
+2. Configure Customer Portal for payment-method updates, invoice viewing and cancellation. Include only the approved prices if plan switching is enabled.
+3. Configure Toolgrain business identity, final logo, brand green and support email info@toolgrain.com. Verify tax-inclusive/exclusive pricing and tax obligations separately; no automatic-tax assumptions are configured.
+4. Create the production endpoint https://toolgrain.com/api/stripe/webhook. Enable checkout.session.completed, customer.subscription.created, customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed, invoice.paid and checkout.session.async_payment_succeeded. Copy its signing secret.
+5. Set all five variables in Vercel and locally in ignored .env.local. Apply migration before enabling checkout. Redeploy. For local Test Mode forward using Stripe CLI: stripe listen --forward-to localhost:3000/api/stripe/webhook. Use that listener's signing secret. Production Checkout/Portal return URLs intentionally remain https://toolgrain.com; local testing needs either the deployed test environment or navigation back to the local account manually.
+6. Test monthly and annual separately: Free account -> Checkout -> test payment -> webhook -> Pro limits -> Portal -> cancellation at period end -> entitled until end -> webhook -> Free. Also test declined payment, retries, unknown prices, duplicate Checkout attempts and repeated/out-of-order webhook deliveries. Live end-to-end confirmation remains required; mocked tests cannot certify Stripe/Supabase configuration.
+
+Account status refreshes every five seconds for up to one minute after a Checkout return, plus manual refresh. Returning is not proof of payment. Server-rendered account/profile state remains authoritative. Free products never depend on a Stripe API request. Only authenticated account ID/email and billing identifiers reach Stripe; no CSV state is accepted by billing actions.
+
+### Billing launch blockers
+
+- Define and verify applicable subscription terms, refund/withdrawal information, cancellation requirements and consumer disclosures before live sales. No refund policy is invented.
+- Verify prices, tax treatment, provider contracts/privacy setup and retry/grace policy.
+- Complete Test Mode monthly/annual lifecycle tests and SQL RLS tests before live activation.
+- Reconcile historical manually granted Pro profiles before enabling billing. No automatic migration revokes them.
+- No trials, coupons, lifetime/team/usage billing or custom cancellation/payment UI.

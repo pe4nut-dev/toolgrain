@@ -1,0 +1,4 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {useRouter} from 'next/navigation';
+export function BillingStatus({plan,returned}:{plan:'free'|'pro';returned:boolean}){const router=useRouter();const [attempts,setAttempts]=useState(0);useEffect(()=>{if(!returned||plan==='pro'||attempts>=12)return;const timer=setTimeout(()=>{router.refresh();setAttempts(n=>n+1);},5000);return()=>clearTimeout(timer);},[returned,plan,attempts,router]);if(!returned)return null;return <div role="status" className="compare-warning">{plan==='pro'?'Toolgrain Pro is active.':attempts>=12?'Activation is still pending. Refresh your account shortly or contact info@toolgrain.com.':'Checkout returned. Waiting for subscription confirmation and Pro activation…'}{plan!=='pro'&&<button type="button" className="button secondary" onClick={()=>router.refresh()}>Refresh status</button>}</div>;}

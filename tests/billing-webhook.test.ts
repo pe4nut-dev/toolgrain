@@ -1,0 +1,20 @@
+import {describe,it,expect,vi,beforeEach} from 'vitest';
+import Stripe from 'stripe';
+vi.mock('server-only',()=>({}));
+vi.mock('../src/lib/stripe/server',()=>({getStripe:vi.fn()}));
+vi.mock('../src/lib/stripe/config',()=>({stripeConfig:()=>({monthly:'price_month',annual:'price_year'})}));
+vi.mock('../src/lib/stripe/repository',()=>({billingRepository:()=>({})}));
+vi.mock('../src/lib/stripe/service',()=>({processBillingEvent:vi.fn()}));
+import {getStripe} from '../src/lib/stripe/server';
+import {processBillingEvent} from '../src/lib/stripe/service';
+import {POST} from '../src/app/api/stripe/webhook/route';
+const stripe=new Stripe('sk_test_unit_tests_only');const secret='whsec_unit_tests_only';
+beforeEach(()=>{vi.clearAllMocks();process.env.STRIPE_WEBHOOK_SECRET=secret;process.env.SUPABASE_SERVICE_ROLE_KEY='test-only';vi.mocked(getStripe).mockReturnValue(stripe);});
+describe('Stripe raw signature boundary',()=>{
+ it('rejects missing signature',async()=>{expect((await POST(new Request('https://toolgrain.com/api/stripe/webhook',{method:'POST',body:'{}'}))).status).toBe(400);expect(processBillingEvent).not.toHaveBeenCalled();});
+ it('rejects forged signatures',async()=>{expect((await POST(new Request('https://toolgrain.com/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':'invalid'},body:'{}'}))).status).toBe(400);expect(processBillingEvent).not.toHaveBeenCalled();});
+ it('accepts signed raw JSON and dispatches verified event',async()=>{const body=JSON.stringify({id:'evt_test',type:'customer.subscription.updated',data:{object:{customer:'cus_one'}}});const header=stripe.webhooks.generateTestHeaderString({payload:body,secret});expect((await POST(new Request('https://toolgrain.com/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':header},body}))).status).toBe(200);expect(processBillingEvent).toHaveBeenCalledWith(expect.anything(),expect.anything(),expect.objectContaining({id:'evt_test'}),expect.anything());});
+ it('body changes invalidate original signature',async()=>{const body='{}';const header=stripe.webhooks.generateTestHeaderString({payload:body,secret});expect((await POST(new Request('https://toolgrain.com/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':header},body:body+' '}))).status).toBe(400);});
+ it('temporary processing failure returns retryable status',async()=>{vi.mocked(processBillingEvent).mockRejectedValueOnce(new Error('private secret'));const body='{}';const header=stripe.webhooks.generateTestHeaderString({payload:body,secret});const response=await POST(new Request('https://toolgrain.com/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':header},body}));expect(response.status).toBe(503);expect(await response.text()).not.toContain('private secret');});
+ it('missing secrets safely disables billing',async()=>{vi.mocked(getStripe).mockReturnValue(null);expect((await POST(new Request('https://toolgrain.com/api/stripe/webhook',{method:'POST',body:'{}'}))).status).toBe(503);});
+});
