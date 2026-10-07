@@ -1,4 +1,5 @@
 'use client';
+import {trackToolgrainEvent} from '@/lib/analytics-events';
 import {useAccount} from '@/components/auth/account-provider';
 import { useEffect, useRef, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
@@ -63,7 +64,7 @@ export function CSVCompare() {
  <div className="compare-key-grid">{(['old','new'] as const).map(side=><label key={side} htmlFor={'compare-'+side+'-key'}>{side==='old'?'Old':'New'} file key<select aria-label={side==='old'?'Old file key':'New file key'} id={'compare-'+side+'-key'} value={slots[side].key} onChange={e=>chooseKey(side,e.target.value)}><option value="">Choose a key column</option>{slots[side].csv!.columns.map((column,index)=><option key={column.key} value={column.key}>{column.name}{slots[side].csv!.columns.filter(c=>c.name===column.name).length>1?' (column '+(index+1)+')':''}</option>)}</select></label>)}</div>
  <p className="muted">Choose the column that identifies a record, such as id, email or sku. Confirm both keys before comparing. Matching trims key whitespace and keeps case significant.</p>
  </>}
- action={<button type="button" className="button" disabled={!ready||parsing||!a.key||!b.key} onClick={()=>{if(a.csv&&b.csv&&ready)setResult(compareCsv(a.csv,b.csv,a.key,b.key));}}>Compare CSVs</button>}
+ action={<button type="button" className="button" disabled={!ready||parsing||!a.key||!b.key} onClick={()=>{if(a.csv&&b.csv&&ready&&a.key&&b.key){trackToolgrainEvent('tool_started',{tool:'csv-compare',plan});const compared=compareCsv(a.csv,b.csv,a.key,b.key);setResult(compared);trackToolgrainEvent('tool_completed',{tool:'csv-compare',plan});}}}>Compare CSVs</button>}
  result={result&&a.csv&&b.csv&&<div ref={resultRef} tabIndex={-1} className="analysis-focus" aria-label="Comparison complete"><CsvCompareResult result={result} oldCsv={a.csv} newCsv={b.csv} oldFilename={a.file!.name} newFilename={b.file!.name} /></div>}
  note={<p><ShieldCheck size={15} aria-hidden="true" />Your files stay on your device. Parsing, comparison and export run locally in your browser. No CSV contents are uploaded.</p>}
  />;

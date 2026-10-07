@@ -1,4 +1,6 @@
 'use client';
+import {trackToolgrainEvent} from '@/lib/analytics-events';
+import {useAccount} from '@/components/auth/account-provider';
 import { DuplicateDifferences } from './duplicate-differences';
 import { useMemo, useState } from 'react';
 import type { CsvRow } from '@/lib/csv/types';
@@ -27,6 +29,7 @@ function ReviewGroup({group,session,onChange,values}:{group:DuplicateGroup;sessi
  </details>;
 }
 export function CrmCleaningWorkflow({session,onChange,fileName}:Props){
+ const plan=useAccount().plan;
  const [review,setReview]=useState(false),[groupLimit,setGroupLimit]=useState(20),[fixLimit,setFixLimit]=useState(20),[preview,setPreview]=useState<'original'|'cleaned'>('cleaned');
  const [downloadError,setDownloadError]=useState('');
  const reviewed=Object.keys(session.duplicateDecisions).length,groups=session.analysis.duplicateGroups;
@@ -39,7 +42,7 @@ export function CrmCleaningWorkflow({session,onChange,fileName}:Props){
  const missing=session.unresolvedIssues.filter(issue=>issue.type.startsWith('missing_')).length;
  const previewRows=preview==='original'?session.originalCsv.rows:session.workingRows;
  const previewNumbers=preview==='original'?undefined:session.retainedRowNumbers;
- function download(){try{downloadCleanedCsv(session,fileName);setDownloadError('')}catch{setDownloadError('This CSV could not be prepared for download. Try again.')}}
+ function download(){try{downloadCleanedCsv(session,fileName);trackToolgrainEvent('export_clicked',{tool:'crm-cleaner',plan});setDownloadError('')}catch{setDownloadError('This CSV could not be prepared for download. Try again.')}}
  return <section className="crm-cleaning" aria-label="Clean your CSV">
  <h3>Clean your CSV</h3><p className="muted">Apply suggested changes, review duplicates, then download. Your original data stays unchanged.</p>
  <dl className="health-summary"><div><dt>Safe fixes</dt><dd>{number.format(remainingFixes.length)} available</dd></div><div><dt>Duplicate groups</dt><dd>{number.format(groups.length-reviewed)} to review</dd></div><div><dt>Manual issues</dt><dd>{number.format(invalid+missing)}</dd></div></dl>

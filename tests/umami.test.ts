@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { analyticsPublicPaths } from '../src/lib/analytics';
 import { createUmamiPrivacyFilter } from '../src/lib/umami';
+import {sanitizeToolgrainEvent} from '../src/lib/analytics-events';
 
 const website = 'bab65517-c03d-496f-b6e5-4891619fe213';
 const filter = createUmamiPrivacyFilter(analyticsPublicPaths, website);
@@ -34,7 +35,7 @@ describe('Umami anonymous automatic pageviews', () => {
     expect(result).toEqual({ website, hostname: 'toolgrain.com', url: '/tools', title: 'Toolgrain', referrer: '' });
   });
   it('runs its serialized guard with no module, auth or client component dependencies', () => {
-    const serialized = `(${createUmamiPrivacyFilter.toString()})(${JSON.stringify(analyticsPublicPaths)},${JSON.stringify(website)})`;
+    const serialized = `(${createUmamiPrivacyFilter.toString()})(${JSON.stringify(analyticsPublicPaths)},${JSON.stringify(website)},(${sanitizeToolgrainEvent.toString()}))`;
     const browserFilter = runInNewContext(serialized, { URL, Set });
     expect(browserFilter('event', pageview)).toEqual(filter('event', pageview));
   });

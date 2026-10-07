@@ -1,4 +1,5 @@
 'use client';
+import {trackToolgrainEvent} from '@/lib/analytics-events';
 import {useAccount} from '@/components/auth/account-provider';
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, ShieldCheck } from 'lucide-react';
@@ -75,6 +76,7 @@ export function CRMCSVCleaner() {
     const controller = new AbortController();
     controllerRef.current = controller;
     setState('processing');
+    trackToolgrainEvent('tool_started',{tool:'crm-cleaner',plan});
     try {
       const parsed = await parseCsvFile(file, controller.signal);
       if (controller.signal.aborted) return;
@@ -87,6 +89,7 @@ export function CRMCSVCleaner() {
       setCrm(health);
       setSession(createCleaningSession(parsed,health));
       setState('result');
+      trackToolgrainEvent('tool_completed',{tool:'crm-cleaner',plan});
     } catch (caught) {
       if (controller.signal.aborted) return;
       setError(caught instanceof CsvError ? caught.message : 'Something went wrong while reading this CSV.');

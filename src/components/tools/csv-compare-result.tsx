@@ -1,4 +1,6 @@
 'use client';
+import {trackToolgrainEvent} from '@/lib/analytics-events';
+import {useAccount} from '@/components/auth/account-provider';
 import { Download } from 'lucide-react';
 import { createComparisonExport, downloadComparisonExport, type ExportCategory } from '@/lib/csv-compare/export-csv';
 import { useState } from 'react';
@@ -20,6 +22,7 @@ function ChangedRecordComparison({record,result}:{record:ChangedRecord;result:Co
 }
 export function CsvCompareResult({ result, oldCsv, newCsv, oldFilename, newFilename }: { result: ComparisonResult; oldCsv: ParsedCsv; newCsv: ParsedCsv; oldFilename: string; newFilename: string }) {
  const [category, setCategory] = useState<Category>(result.changed.length ? 'changed' : (['added','removed','unchanged','issues'] as const).find(key=>result[key].length) ?? 'changed');
+ const plan=useAccount().plan;
  const [exportError,setExportError]=useState('');
  const [limit, setLimit] = useState(50);
  const affectedRows = result.issues.reduce((total, issue)=>total+issue.oldRows.length+issue.newRows.length,0);
@@ -42,7 +45,7 @@ export function CsvCompareResult({ result, oldCsv, newCsv, oldFilename, newFilen
  <section className="compare-exports" aria-label="Export results"><h2>Export results</h2><p className="muted">Download the full results, including records beyond the preview. Exports are generated locally as UTF-8 CSV files.</p><div className="compare-export-grid">{(['added','removed','changed','issues'] as ExportCategory[]).map(kind=>{
  const count=kind==='changed'?result.changed.reduce((sum,record)=>sum+record.changes.length,0):result[kind].length;
  const label=kind==='added'?'Added rows':kind==='removed'?'Removed rows':kind==='changed'?'Changed fields':'Key issues';
- return <div key={kind}><h3>{label}</h3><p>{number.format(count)} {kind==='changed'?(count===1?'changed field':'changed fields'):kind==='issues'?(count===1?'issue group':'issue groups'):(count===1?'row':'rows')}</p><button type="button" className="button secondary" disabled={!count} onClick={()=>{try{const report=createComparisonExport(kind,result,oldCsv,newCsv,oldFilename,newFilename);if(report)downloadComparisonExport(report);setExportError('');}catch{setExportError('This CSV could not be prepared for download. Try again.');}}}><Download size={16} aria-hidden="true" />Download {kind==='issues'?'key issues':kind} CSV</button></div>;
+ return <div key={kind}><h3>{label}</h3><p>{number.format(count)} {kind==='changed'?(count===1?'changed field':'changed fields'):kind==='issues'?(count===1?'issue group':'issue groups'):(count===1?'row':'rows')}</p><button type="button" className="button secondary" disabled={!count} onClick={()=>{try{const report=createComparisonExport(kind,result,oldCsv,newCsv,oldFilename,newFilename);if(report){downloadComparisonExport(report);trackToolgrainEvent('export_clicked',{tool:'csv-compare',plan});}setExportError('');}catch{setExportError('This CSV could not be prepared for download. Try again.');}}}><Download size={16} aria-hidden="true" />Download {kind==='issues'?'key issues':kind} CSV</button></div>;
  })}</div>{exportError&&<p className="file-error" role="alert">{exportError}</p>}</section>
  </section>;
 }
