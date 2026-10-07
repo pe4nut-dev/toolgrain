@@ -312,3 +312,42 @@ Safe server diagnostics record stage, allowlisted error name, fixed safe message
 ### Privileged billing client authentication
 
 Billing RPCs and privileged profile operations use a separate server-only `@supabase/supabase-js` client, never the cookie-aware SSR client. Session resolution is disabled. Its transport sends `sb_secret_...` credentials only in `apikey`, removes Authorization and Cookie headers, and omits browser credentials. Legacy service-role JWT keys retain their own Bearer header. Do not attach end-user tokens or call authentication methods on this admin client. Safe diagnostics include HTTP status (when available), operation stage and allowlisted error codes; upstream messages, headers and tokens are never logged. A production lock failure still needs its actual status/code to distinguish authentication, permissions, missing schema and a busy lease.
+
+## Billing activation emails (Phase 11.4.1)
+
+Toolgrain sends one transactional “Welcome to Toolgrain Pro” confirmation after a trusted webhook writes an entitled Pro subscription. It does not generate invoices, receipts or PDFs. Stripe remains the billing system of record. CSV filenames, contents, job row counts and tool results never enter the email path.
+
+### Deployment and IONOS SMTP
+
+1. Run `supabase/migrations/202610070002_billing_emails.sql` in the Supabase SQL Editor before deploying. The migration is idempotent, installs a profile-transition trigger and a service-role-only email claim RPC/table. It does not backfill welcome emails for existing Pro accounts.
+2. Set these **server-only** Vercel variables (also listed in `.env.example`):
+
+| Variable | Recommended IONOS value |
+| --- | --- |
+| `SMTP_HOST` | `smtp.ionos.de` |
+| `SMTP_PORT` | `465` |
+| `SMTP_USER` | `info@toolgrain.com` |
+| `SMTP_PASSWORD` | The mailbox password, supplied through environment configuration only |
+| `SMTP_FROM_EMAIL` | `info@toolgrain.com` |
+| `SMTP_FROM_NAME` | `Toolgrain` |
+
+Never use `NEXT_PUBLIC_` for SMTP credentials. Port 465 uses implicit TLS; other ports require STARTTLS with certificate verification enabled. SMTP connections have short connection/greeting/socket timeouts and no protocol/debug logging. Missing SMTP configuration logs `SMTP_UNAVAILABLE` and leaves billing and checkout enabled.
+
+### Trigger, recipient and persistent duplicate prevention
+
+The database queues a message in the same transaction as a profile's transition to Pro (or a new entitled subscription identity). `billing_email_events` has a unique `(stripe_subscription_id, email_type)` identity. Renewal and webhook retries cannot add another welcome message for that subscription. A later purchase with a new Stripe subscription ID can queue a new message. Unknown prices never create a misleading email. Cycle/price labels come from trusted price IDs and central plan configuration; the period end is the trusted activation snapshot. The claim RPC resolves the current account email directly from `auth.users`, ignoring browser input, Stripe email fields and metadata. No recipient email or message body is stored in this operational table.
+
+After writing Pro, the webhook attempts to claim the pending message atomically (`pending` → `sending`) before SMTP, then records `sent` or `failed`. Only the service role can claim/read/update operational state. All email errors are isolated from entitlement and webhook success. Safe diagnostics contain message type, account/subscription/event IDs, test/live context and a fixed error category; never raw SMTP errors, recipient addresses, credentials, tokens or CSV contents.
+
+**SMTP delivery is at-most-once attempted per subscription**, not a promise of exactly-once delivery. SMTP has no transactional idempotency API: a crash or lost response after acceptance can leave `sending` or `failed` with uncertain delivery. Such messages are deliberately not automatically retried, preventing duplicate welcome emails. Operators must inspect mailbox/provider delivery records before any manual resend. Missing SMTP configuration leaves the message pending; configuring SMTP and replaying a trusted webhook can send it. There is no cron/queue worker in this phase, so pending messages require a later webhook or controlled replay. A safe database warning indicates enqueue failures without undoing billing; operators must investigate it. Email table rows are operational account metadata, deleted on profile deletion; review retention alongside other billing metadata.
+
+### Stripe Dashboard configuration (separate from Toolgrain SMTP)
+
+- Enable appropriate customer emails for successful payments/invoices in Stripe's billing/customer-email settings. Verify the Customer's billing email and delivery behavior.
+- Configure business name **Toolgrain**, support email **info@toolgrain.com**, the final Toolgrain logo, and brand green **#31674E**.
+- Keep Customer Portal invoice/billing history, payment-method updates and cancellation enabled.
+- Stripe Test Mode/Sandbox receipts do not behave identically to Live Mode; automatic Stripe receipts are not sent by default in test mode. See [Stripe receipt guidance](https://support.stripe.com/questions/why-did-stripe-not-send-an-email-receipt-for-my-successfully-paid-invoice?locale=en-GB).
+
+### Verification before enabling email delivery
+
+Use Stripe Test Mode and a controlled Toolgrain account with access to its mailbox. Activate monthly Pro and verify Monthly / €8.90 / month, actual period-end date, logo and account CTA in HTML and plain text. Repeat on a separate/new annual subscription for Annual / €69.00 / year. Replay the webhook and send renewal events: each subscription must have only one SMTP attempt. Test unavailable/invalid SMTP credentials: Pro must remain active and webhooks must acknowledge successful billing. Review desktop/mobile Gmail, Outlook and Apple Mail rendering, SPF/DKIM/DMARC and IONOS delivery/rate limits. Never test by sending to unrelated accounts. Test subscriptions can send Toolgrain's own emails when SMTP is configured; test context is in diagnostics, not Sandbox branding in the email.
