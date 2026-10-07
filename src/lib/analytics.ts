@@ -1,6 +1,7 @@
 import type {BeforeSendEvent} from '@vercel/analytics/next';
 import {tools} from '@/lib/tools';
-const publicPaths=new Set(['/', '/tools', '/pricing', '/about', '/privacy', '/imprint', ...tools.map(tool=>'/tools/'+tool.slug)]);
+export const analyticsPublicPaths=['/', '/tools', '/pricing', '/about', '/privacy', '/imprint', ...tools.map(tool=>'/tools/'+tool.slug)];
+const publicPaths=new Set(analyticsPublicPaths);
 // Never send auth URLs, arbitrary paths, query parameters, hashes or custom payloads.
 export function filterAnalyticsEvent(event:BeforeSendEvent):BeforeSendEvent|null {
  if(event.type!=='pageview')return null;
