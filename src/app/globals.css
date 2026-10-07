@@ -397,3 +397,8 @@ button:disabled { cursor: not-allowed; }
 @media(max-width:650px) { .login-backdrop .auth-page { padding-top: 38px; padding-bottom: 38px; } }
 
 .login-backdrop .auth-page { max-width: 420px; }
+
+.brand-logo { display: inline-flex; align-items: center; gap: 10px; vertical-align: middle; }
+.brand-logo img { flex-shrink: 0; object-fit: contain; }
+.brand-wordmark { font-family: var(--font-brand), sans-serif; font-weight: 800; color: #111; }
+.auth-brand { margin-bottom: 20px; font-size: 18px; }

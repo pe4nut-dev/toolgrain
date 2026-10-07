@@ -263,3 +263,9 @@ The same Supabase project can later host feedback tickets. No ticket system/sche
 ## Vercel Web Analytics
 
 Installed @vercel/analytics with the Next.js component in the root layout. Only public registry-backed page paths are sent; auth/account paths, query strings, fragments and custom events are dropped by beforeSend. No CSV state or account data is passed. Vercel also collects operational analytics metadata (including referrer/device information); see its current privacy documentation. No analytics cookies or application storage were added. Earlier no-analytics audits describe the baseline before this integration. Reassess the legal basis, provider terms and retention settings for this deployment. Enable Web Analytics in the Vercel project, deploy the changes and verify page views in its dashboard. No extra environment variable is required.
+
+## Final brand identity
+
+BrandLogo centralizes the supplied T/grain mark and live Toolgrain wordmark for header, footer and auth/account pages. Manrope ExtraBold (800) is self-hosted by next/font/google at build time; no runtime Google Fonts request. Manrope is licensed under SIL Open Font License 1.1. Body typography and UI colors are unchanged.
+
+Email templates can use https://toolgrain.com/brand/toolgrain-logo.png at 150–180px width. Mark-only: https://toolgrain.com/brand/toolgrain-mark.png. The legacy /toolgrain-logo.png URL now uses the new mark. Next.js icon.png and apple-icon.png replace the old boxes SVG. Assets are static and do not require authentication. Crops and proportional resizing come from the supplied transparent PNG, without redrawing or recoloring.

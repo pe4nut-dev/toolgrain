@@ -1,3 +1,3 @@
 import { defineConfig } from 'vitest/config';
 import {fileURLToPath} from 'node:url';
-export default defineConfig({resolve:{alias:{'@':fileURLToPath(new URL('./src',import.meta.url))}},test:{environment:'node',include:['tests/**/*.test.ts'],pool:'threads',maxWorkers:1},});
+export default defineConfig({resolve:{alias:{'@':fileURLToPath(new URL('./src',import.meta.url))}},test:{environment:'node',include:['tests/**/*.test.ts','tests/**/*.test.tsx'],pool:'threads',maxWorkers:1},});
