@@ -6,9 +6,11 @@ function environment(){return {
  webhook:process.env.STRIPE_WEBHOOK_SECRET?.trim()??'',
  admin:process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()??'',
 };}
+// Standard and restricted keys use the same server-side Stripe SDK authentication.
+function serverKeyMode(key:string):'test'|'live'|'unknown'{const match=/^(?:sk|rk)_(test|live)_[A-Za-z0-9_]+$/.exec(key);return match?.[1]==='test'?'test':match?.[1]==='live'?'live':'unknown';}
 function stripeReason(env:ReturnType<typeof environment>):string|null{
  if(!env.secret)return 'missing_stripe_secret';
- if(!/^sk_(test|live)_[^\s]+$/.test(env.secret))return 'invalid_stripe_secret_format';
+ if(serverKeyMode(env.secret)==='unknown')return 'invalid_stripe_secret_format';
  if(!env.monthly)return 'missing_monthly_price';
  if(!/^price_[A-Za-z0-9_]+$/.test(env.monthly))return 'invalid_monthly_price_format';
  if(!env.annual)return 'missing_annual_price';
@@ -28,6 +30,6 @@ export function billingAvailability():BillingAvailability{
   else if(!env.admin)unavailableReason='missing_supabase_admin';
   else if(/\s/.test(env.admin))unavailableReason='invalid_supabase_admin_format';
  }
- return {stripeSecretPresent:!!env.secret,stripeSecretMode:env.secret.startsWith('sk_test_')?'test':env.secret.startsWith('sk_live_')?'live':'unknown',monthlyPricePresent:!!env.monthly,annualPricePresent:!!env.annual,webhookSecretPresent:!!env.webhook,supabaseAdminPresent:!!env.admin,unavailableReason};
+ return {stripeSecretPresent:!!env.secret,stripeSecretMode:serverKeyMode(env.secret),monthlyPricePresent:!!env.monthly,annualPricePresent:!!env.annual,webhookSecretPresent:!!env.webhook,supabaseAdminPresent:!!env.admin,unavailableReason};
 }
 export function billingAvailable(options:{logDiagnostics?:boolean}={}){const report=billingAvailability();if(options.logDiagnostics)console.info({billingAvailability:report});return report.unavailableReason===null;}
