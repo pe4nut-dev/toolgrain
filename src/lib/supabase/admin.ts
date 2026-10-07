@@ -2,7 +2,7 @@ import 'server-only';
 import {createClient} from '@supabase/supabase-js';
 
 export function createSupabaseAdmin(){
- const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ const url=process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(),key=process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
  if(!url||!key)return null;
  const opaqueSecret=key.startsWith('sb_secret_');
  return createClient(url,key,{

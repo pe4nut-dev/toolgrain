@@ -2,7 +2,7 @@ import {describe,it,expect,vi,beforeEach} from 'vitest';
 import Stripe from 'stripe';
 vi.mock('server-only',()=>({}));
 vi.mock('../src/lib/stripe/server',()=>({getStripe:vi.fn()}));
-vi.mock('../src/lib/stripe/config',()=>({stripeConfig:()=>({monthly:'price_month',annual:'price_year'})}));
+vi.mock('../src/lib/stripe/config',()=>({stripeConfig:()=>({monthly:'price_month',annual:'price_year'}),stripeWebhookSecret:()=>process.env.STRIPE_WEBHOOK_SECRET?.trim()??''}));
 vi.mock('../src/lib/stripe/repository',()=>({billingRepository:()=>({})}));
 vi.mock('../src/lib/stripe/service',()=>({processBillingEvent:vi.fn()}));
 import {getStripe} from '../src/lib/stripe/server';
