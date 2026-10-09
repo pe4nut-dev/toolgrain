@@ -1,4 +1,6 @@
 'use client';
+import {createCompareSampleFiles} from '@/lib/csv/sample-data';
+import {WorkflowStepper} from '../workflow-stepper';
 import {trackToolgrainEvent} from '@/lib/analytics-events';
 import {useAccount} from '@/components/auth/account-provider';
 import { useEffect, useRef, useState } from 'react';
@@ -16,8 +18,8 @@ import {plans} from '@/config/plans';
 import {rowViolation,fileSizeViolation,fileSizeLimitMessage,type UsageViolation} from '@/lib/entitlements';
 import {PlanIndicator,UpgradePrompt} from '../upgrade-prompt';
 type Side = 'old' | 'new';
-type Slot = { file: File | null; csv: ParsedCsv | null; key: string; error: string | null; parsing: boolean; version: number; usage: UsageViolation|null };
-const emptySlot = (): Slot => ({ file: null, csv: null, key: '', error: null, parsing: false, version: 0, usage:null });
+type Slot = { sample: boolean; file: File | null; csv: ParsedCsv | null; key: string; error: string | null; parsing: boolean; version: number; usage: UsageViolation|null };
+const emptySlot = (): Slot => ({ sample: false, file: null, csv: null, key: '', error: null, parsing: false, version: 0, usage:null });
 const acceptedTypes = ['.csv'] as const;
 const number = new Intl.NumberFormat('en');
 export function CSVCompare() {
@@ -32,10 +34,10 @@ export function CSVCompare() {
   controllers.current[side]?.abort();setResult(null);
   setSlots(current=>({...current,[side]:{...emptySlot(),version:current[side].version+1}}));
  }
- async function select(side:Side,file:File) {
+ async function select(side:Side,file:File,sample=false) {
   controllers.current[side]?.abort(); const controller = new AbortController();controllers.current[side]=controller;
   const previousName=slots[side].csv?.columns.find(c=>c.key===slots[side].key)?.name;
-  setResult(null);setSlots(current=>({...current,[side]:{...emptySlot(),file,parsing:true,version:current[side].version+1}}));
+  setResult(null);setSlots(current=>({...current,[side]:{...emptySlot(),file,sample,parsing:true,version:current[side].version+1}}));
   try {
    const csv=await parseCsvFile(file,controller.signal);if(controller.signal.aborted)return;
    setSlots(current=>{
@@ -55,10 +57,10 @@ export function CSVCompare() {
  }
  const a=slots.old,b=slots.new,ready=!!(a.csv&&b.csv&&!a.usage&&!b.usage),parsing=a.parsing||b.parsing;
  const schema=ready&&a.csv&&b.csv?analyzeSchema(a.csv.columns,b.csv.columns):null;
- return <WorkspaceShell state={parsing?'processing':result?'result':'idle'}
- upload={<><PlanIndicator tool="csv-compare"/><div className="compare-upload-grid">{(['old','new'] as const).map(side=>{const slot=slots[side];return <section key={side} aria-labelledby={'compare-'+side+'-title'}><h2 id={'compare-'+side+'-title'}>{side==='old'?'Old':'New'} CSV</h2>{slot.file && <SelectedFiles files={[slot.file]} onRemove={()=>clear(side)} />}
- <FileDropzone key={slot.version} acceptedTypes={acceptedTypes} multiple={false} maxFileSize={plans[plan].fileSizeBytes} fileSizeError={file=>fileSizeLimitMessage(plan,file.size)} onFileSizeRejected={file=>setSlots(current=>({...current,[side]:{...current[side],usage:fileSizeViolation(plan,'csv-compare',file.size,(side==='old'?'Old CSV':'New CSV')+': '+file.name)}}))} fileTypeLabel="CSV" title={slot.file?'Drop a CSV to replace this file':'Drop your '+side+' CSV here'} fileTypeError="This tool supports CSV files only." onFilesSelected={files=>{void select(side,files[0]);}} onValidationChange={error=>{if(error){controllers.current[side]?.abort();setResult(null);setSlots(current=>({...current,[side]:{...current[side],csv:null,key:'',error:null,parsing:false,usage:null}}));}}} />
- {slot.usage&&<UpgradePrompt usage={slot.usage}/>}<p role="status">{slot.parsing?'Parsing locally…':slot.csv?'Ready: '+number.format(slot.csv.rows.length)+' rows · '+slot.csv.columns.length+' columns':!slot.file?'Select a CSV with a header row.':''}</p>{slot.error && <p className="file-error" role="alert">{slot.error}</p>}{slot.csv?.warnings.map(w=><p key={w} className="compare-warning">{w}</p>)}</section>;})}</div></>}
+ return <div className="csv-tool-workspace compare-workspace"><WorkflowStepper steps={['Upload','Select key','Compare','Export']} current={result?'Export':!ready?'Upload':!a.key||!b.key?'Select key':'Compare'}/><WorkspaceShell state={parsing?'processing':result?'result':'idle'}
+ upload={<><PlanIndicator tool="csv-compare"/><div className="compare-upload-grid">{(['old','new'] as const).map(side=>{const slot=slots[side];return <section key={side} aria-labelledby={'compare-'+side+'-title'}><h2 id={'compare-'+side+'-title'}>{side==='old'?'Original':'Updated'} CSV</h2>
+ <FileDropzone compactContent={slot.file&&<SelectedFiles files={[slot.file]} onRemove={()=>clear(side)} showRemove={false} metadata={<>{slot.csv?number.format(slot.csv.rows.length)+' rows':''}{slot.sample&&<>{slot.csv?' · ':''}<span className="sample-data-badge">Fictional sample data</span></>}</>}/>} compactActions={<button type="button" className="button ghost" onClick={()=>clear(side)}>Remove</button>} key={slot.version} acceptedTypes={acceptedTypes} multiple={false} maxFileSize={plans[plan].fileSizeBytes} fileSizeError={file=>fileSizeLimitMessage(plan,file.size)} onFileSizeRejected={file=>setSlots(current=>({...current,[side]:{...current[side],usage:fileSizeViolation(plan,'csv-compare',file.size,(side==='old'?'Old CSV':'New CSV')+': '+file.name)}}))} fileTypeLabel="CSV" title={slot.file?'Drop a CSV to replace this file':'Drop your '+side+' CSV here'} fileTypeError="This tool supports CSV files only." onFilesSelected={files=>{void select(side,files[0]);}} onValidationChange={error=>{if(error){controllers.current[side]?.abort();setResult(null);setSlots(current=>({...current,[side]:{...current[side],csv:null,key:'',error:null,parsing:false,usage:null}}));}}} />
+ {slot.usage&&<UpgradePrompt usage={slot.usage}/>}<p role="status">{slot.parsing?'Parsing locally…':slot.csv?slot.csv.columns.length+' columns · Ready to compare':!slot.file?'Select a CSV with a header row.':''}</p>{slot.error && <p className="file-error" role="alert">{slot.error}</p>}{slot.csv?.warnings.map(w=><p key={w} className="compare-warning">{w}</p>)}</section>;})}</div><div className="tool-sample-action"><button type="button" className="button secondary" disabled={parsing} onClick={()=>{const samples=createCompareSampleFiles();void select('old',samples.old,true);void select('new',samples.new,true);}}>Try with sample files</button>{(a.file||b.file)&&<button type="button" className="button ghost" onClick={()=>{clear('old');clear('new');}}>Remove both files</button>}<p>Fictional Original and Updated catalogs. Select sku in both key fields to compare products across reordered rows.</p></div></>}
  settings={ready&&schema&&<>
  <div className="compare-schema"><h3>Column structure</h3><p>Shared columns: {schema.shared.length} · Only in old: {schema.onlyOld.length} · Only in new: {schema.onlyNew.length}</p><p>Only in old: {schema.onlyOld.join(', ')||'None'}</p><p>Only in new: {schema.onlyNew.join(', ')||'None'}</p>{schema.ambiguous.length>0 && <p className="compare-warning">Repeated headers cannot be paired reliably and are excluded from field comparison: {schema.ambiguous.join(', ')}. Key dropdowns identify repeated columns by position.</p>}<p className="muted">Column order does not matter. Only shared non-key columns are compared; schema-only changes do not mark rows changed.</p></div>
  <div className="compare-key-grid">{(['old','new'] as const).map(side=><label key={side} htmlFor={'compare-'+side+'-key'}>{side==='old'?'Old':'New'} file key<select aria-label={side==='old'?'Old file key':'New file key'} id={'compare-'+side+'-key'} value={slots[side].key} onChange={e=>chooseKey(side,e.target.value)}><option value="">Choose a key column</option>{slots[side].csv!.columns.map((column,index)=><option key={column.key} value={column.key}>{column.name}{slots[side].csv!.columns.filter(c=>c.name===column.name).length>1?' (column '+(index+1)+')':''}</option>)}</select></label>)}</div>
@@ -67,5 +69,5 @@ export function CSVCompare() {
  action={<button type="button" className="button" disabled={!ready||parsing||!a.key||!b.key} onClick={()=>{if(a.csv&&b.csv&&ready&&a.key&&b.key){trackToolgrainEvent('tool_started',{tool:'csv-compare',plan});const compared=compareCsv(a.csv,b.csv,a.key,b.key);setResult(compared);trackToolgrainEvent('tool_completed',{tool:'csv-compare',plan});}}}>Compare CSVs</button>}
  result={result&&a.csv&&b.csv&&<div ref={resultRef} tabIndex={-1} className="analysis-focus" aria-label="Comparison complete"><CsvCompareResult result={result} oldCsv={a.csv} newCsv={b.csv} oldFilename={a.file!.name} newFilename={b.file!.name} /></div>}
  note={<p><ShieldCheck size={15} aria-hidden="true" />Your files stay on your device. Parsing, comparison and export run locally in your browser. No CSV contents are uploaded.</p>}
- />;
+ /></div>;
 }

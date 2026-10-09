@@ -1,3 +1,4 @@
+import {crmSampleCsv,compareOriginalSampleCsv,compareUpdatedSampleCsv} from '../src/lib/csv/sample-data';
 /* eslint-disable @typescript-eslint/no-explicit-any -- Lightweight action harness inspects heterogeneous React props without adding a DOM dependency. */
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest';
 import * as React from 'react';
@@ -14,6 +15,7 @@ vi.mock('../src/lib/shopify/export',()=>({downloadShopifyCsv:harness.shopifyDown
 vi.mock('../src/app/billing/actions',()=>({checkoutAction:harness.checkout}));
 vi.mock('next/navigation',()=>({usePathname:()=>'/'}));
 import {parseCsvText} from '../src/lib/csv/parse-csv';
+import {compareCsv} from '../src/lib/csv-compare/compare-csv';
 import {CRMCSVCleaner} from '../src/components/tools/apps/crm-csv-cleaner';
 import {CSVCompare} from '../src/components/tools/apps/csv-compare';
 import {SupplierCSVToShopify} from '../src/components/tools/apps/supplier-csv-to-shopify';
@@ -238,5 +240,95 @@ describe('explicit upgrade and confirmed checkout actions',()=>{
  });
  it('failed checkout has no checkout_started event',async()=>{
   harness.checkout.mockResolvedValue({error:'Unavailable'});render(()=>BillingButtons({signedIn:true,plan:'free',available:true}));await harness.submit({},new FormData());expect(track).not.toHaveBeenCalled();expect(navigate).not.toHaveBeenCalled();
+ });
+});
+
+describe('CRM and Compare sample UI workflows',()=>{
+ it('CRM sample selection is idle until Analyze and uses the same parser',async()=>{
+  button(render(CRMCSVCleaner),'Try with sample CSV').props.onClick();
+  expect(harness.parse).not.toHaveBeenCalled();expect(track).not.toHaveBeenCalled();
+  expect(JSON.stringify(render(CRMCSVCleaner))).toContain('Fictional sample data');
+  harness.parse.mockResolvedValue(parseCsvText(crmSampleCsv));
+  await button(render(CRMCSVCleaner),'Analyze CSV').props.onClick();
+  expect(harness.parse.mock.calls[0][0]).toBeInstanceOf(File);
+  expect(track.mock.calls).toEqual([['tool_started',{tool:'crm-cleaner',plan:'free'}],['tool_completed',{tool:'crm-cleaner',plan:'free'}]]);
+  expect(element(render(CRMCSVCleaner),CrmCleaningWorkflow).props.session.originalCsv.rows).toHaveLength(20);
+ });
+ it('CRM sample replacement clears demo status and review, and Remove resets the file',async()=>{
+  button(render(CRMCSVCleaner),'Try with sample CSV').props.onClick();harness.parse.mockResolvedValue(parseCsvText(crmSampleCsv));
+  await button(render(CRMCSVCleaner),'Analyze CSV').props.onClick();
+  element(render(CRMCSVCleaner),FileDropzone).props.onFilesSelected([privateFile]);
+  expect(JSON.stringify(render(CRMCSVCleaner))).not.toContain('Fictional sample data');
+  expect(nodes(render(CRMCSVCleaner)).some(node=>node.type===CrmCleaningWorkflow)).toBe(false);
+  button(render(CRMCSVCleaner),'Remove').props.onClick();
+  expect(button(render(CRMCSVCleaner),'Analyze CSV').props.disabled).toBe(true);expect(track).toHaveBeenCalledTimes(2);
+ });
+ it('Compare loads both samples via the parser and requires a selected key without tracking load',async()=>{
+  harness.parse.mockImplementation(async(file:File)=>parseCsvText(await file.text()));
+  button(render(CSVCompare),'Try with sample files').props.onClick();
+  await Promise.all(harness.parse.mock.results.map(result=>result.value));await flush();
+  expect(harness.parse).toHaveBeenCalledTimes(2);expect(track).not.toHaveBeenCalled();
+  let tree=render(CSVCompare);expect(button(tree,'Compare CSVs').props.disabled).toBe(true);
+  expect(nodes(tree).filter(node=>node.type===SelectedFiles)).toHaveLength(2);
+  nodes(tree).find(node=>node.type==='select'&&node.props['aria-label']==='Old file key').props.onChange({target:{value:'column_0'}});
+  tree=render(CSVCompare);expect(button(tree,'Compare CSVs').props.disabled).toBe(false);
+  button(tree,'Compare CSVs').props.onClick();
+  const result=element(render(CSVCompare),CsvCompareResult).props.result;
+  expect(result.changed).toHaveLength(3);expect(result.unchanged).toHaveLength(14);
+  expect(track.mock.calls).toEqual([['tool_started',{tool:'csv-compare',plan:'free'}],['tool_completed',{tool:'csv-compare',plan:'free'}]]);
+  expect(JSON.stringify(track.mock.calls)).not.toMatch(/\.csv|sku|example|0000/);
+ });
+ it('Compare replaces either sample independently and supports removing both files',async()=>{
+  harness.parse.mockResolvedValue(parseCsvText(compareOriginalSampleCsv));
+  button(render(CSVCompare),'Try with sample files').props.onClick();await flush();
+  const zones=nodes(render(CSVCompare)).filter(node=>node.type===FileDropzone);
+  zones[0].props.onFilesSelected([privateFile]);await flush();
+  let selected=nodes(render(CSVCompare)).filter(node=>node.type===SelectedFiles);
+  expect(selected[0].props.files[0]).toBe(privateFile);
+  expect(JSON.stringify(selected[0])).not.toContain('Fictional sample data');
+  expect(JSON.stringify(selected[1])).toContain('Fictional sample data');
+  button(render(CSVCompare),'Remove both files').props.onClick();
+  selected=nodes(render(CSVCompare)).filter(node=>node.type===SelectedFiles);expect(selected).toHaveLength(0);expect(track).not.toHaveBeenCalled();
+ });
+ it('Compare All filter shows separate categories and filters back to Added',()=>{
+  const oldCsv=parseCsvText(compareOriginalSampleCsv),newCsv=parseCsvText(compareUpdatedSampleCsv);
+  const result=compareCsv(oldCsv,newCsv,'column_0','column_0');
+  const component=()=>CsvCompareResult({result,oldCsv,newCsv,oldFilename:'old.csv',newFilename:'new.csv'});
+  button(render(component),'All').props.onClick();
+  const all=render(component);expect(button(all,'All').props['aria-pressed']).toBe(true);
+  expect(nodes(all).some(node=>node.props['aria-label']==='Added rows')).toBe(true);
+  expect(nodes(all).some(node=>node.props['aria-label']==='Removed rows')).toBe(true);
+  button(all,'Added').props.onClick();
+  const added=render(component);expect(button(added,'Added').props['aria-pressed']).toBe(true);
+  expect(nodes(added).some(node=>node.props['aria-label']==='Removed rows')).toBe(false);
+ });
+});
+describe('comparison detail accessibility',()=>{
+ it('shows full shared row context, labeled changed cells and unchanged values separately',()=>{
+  const oldCsv=parseCsvText(compareOriginalSampleCsv),newCsv=parseCsvText(compareUpdatedSampleCsv);
+  const result=compareCsv(oldCsv,newCsv,'column_0','column_0');
+  const root=render(()=>CsvCompareResult({result,oldCsv,newCsv,oldFilename:'old.csv',newFilename:'new.csv'}));
+  const detail=nodes(root).find(node=>typeof node.type==='function'&&node.type.name==='ChangedRecordComparison');
+  harness.states=[];harness.refs=[];
+  const component=()=>detail.type(detail.props);
+  const collapsed=render(component);collapsed.props.onToggle({currentTarget:{open:true}});
+  const expanded=render(component);
+  expect(nodes(expanded).filter(node=>node.type==='td'&&node.props.className==='changed-value')).toHaveLength(2);
+  expect(nodes(expanded).filter(node=>node.type==='th'&&node.props.scope==='row')).toHaveLength(6);
+  expect(JSON.stringify(expanded)).toContain('Changed');
+  expect(JSON.stringify(expanded)).toContain('00000002');
+  expect(nodes(expanded).some(node=>node.props.role==='region'&&node.props.tabIndex===0)).toBe(true);
+ });
+ it('expands long visible text without changing or losing the original cell value',()=>{
+  const long='Very long description '.repeat(20);
+  const oldCsv=parseCsvText('sku,description\n0001,'+long),newCsv=parseCsvText('sku,description\n0001,'+long+'new');
+  const result=compareCsv(oldCsv,newCsv,'column_0','column_0');
+  const root=render(()=>CsvCompareResult({result,oldCsv,newCsv,oldFilename:'old.csv',newFilename:'new.csv'}));
+  const detail=nodes(root).find(node=>typeof node.type==='function'&&node.type.name==='ChangedRecordComparison');
+  harness.states=[];harness.refs=[];const component=()=>detail.type(detail.props);
+  render(component).props.onToggle({currentTarget:{open:true}});
+  const expanded=render(component);
+  expect(nodes(expanded).filter(node=>node.type==='details'&&node.props.className==='compare-long-value')).toHaveLength(2);
+  expect(nodes(expanded).some(node=>node.type==='p'&&node.props.children===long)).toBe(true);
  });
 });
