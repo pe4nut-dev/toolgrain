@@ -5,7 +5,7 @@ const harness=vi.hoisted(()=>({states:[] as any[],refs:[] as any[],cursor:0,refC
 vi.mock('react',async original=>({...await original<typeof import('react')>(),useState:(initial:any)=>{
  const index=harness.cursor++;if(!(index in harness.states))harness.states[index]=typeof initial==='function'?initial():initial;
  return [harness.states[index],(next:any)=>{harness.states[index]=typeof next==='function'?next(harness.states[index]):next;}];
-},useRef:(initial:any)=>{const index=harness.refCursor++;return harness.refs[index]??(harness.refs[index]={current:initial});},useEffect:()=>{},useMemo:(fn:()=>unknown)=>fn(),useActionState:(action:any)=>{harness.submit=action;return [{},action,false];}}));
+},useRef:(initial:any)=>{const index=harness.refCursor++;return harness.refs[index]??(harness.refs[index]={current:initial});},useId:()=> 'cell-test',useLayoutEffect:()=>{},useEffect:()=>{},useMemo:(fn:()=>unknown)=>fn(),useActionState:(action:any)=>{harness.submit=action;return [{},action,false];}}));
 vi.mock('../src/components/auth/account-provider',()=>({useAccount:()=>({plan:harness.plan,signedIn:false})}));
 vi.mock('../src/lib/csv/parse-csv',async original=>({...await original<typeof import('../src/lib/csv/parse-csv')>(),parseCsvFile:harness.parse}));
 vi.mock('../src/lib/crm/clean/export-csv',()=>({downloadCleanedCsv:harness.crmDownload}));
@@ -26,6 +26,12 @@ import {UpgradeLink} from '../src/components/analytics/upgrade-link';
 import {BillingButtons} from '../src/components/pricing/billing-buttons';
 import {rowViolation} from '../src/lib/entitlements';
 import {Header} from '../src/components/layout/header';
+import {SelectedFiles} from '../src/components/tools/selected-files';
+import {supplierSampleCsv} from '../src/lib/shopify/sample';
+import {ShopifyEditCell} from '../src/components/tools/shopify-edit-cell';
+import {ShopifyIssueValue} from '../src/components/tools/shopify-issue-value';
+import {transformSupplier} from '../src/lib/shopify/transform';
+import {suggestMappings} from '../src/lib/shopify/mapping';
 
 const track=vi.fn(),navigate=vi.fn();
 const privateFile={name:'private-contact-data.csv',size:100} as File;
@@ -47,6 +53,46 @@ beforeEach(()=>{
 });
 afterEach(()=>vi.unstubAllGlobals());
 describe('tool workflow actions, not render or file-selection events',()=>{
+ it('sample uses the upload parser and existing mapping/correction/export workflow without selection events',async()=>{
+  harness.parse.mockImplementation(async(file:File)=>parseCsvText(await file.text()));
+  button(render(SupplierCSVToShopify),'Try with sample CSV').props.onClick();
+  // File.text() is asynchronous; await the exact parse invocation before rendering its result.
+  await harness.parse.mock.results[0].value;await flush();
+  expect(harness.parse).toHaveBeenCalledWith(expect.any(File),expect.any(AbortSignal));expect(track).not.toHaveBeenCalled();
+  expect(JSON.stringify(render(SupplierCSVToShopify))).toContain('Fictional sample data');
+  const mapped=nodes(render(SupplierCSVToShopify)).find(node=>node.props['aria-label']==='Map SKU');expect(mapped.props.value).toBe('column_0');
+  button(render(SupplierCSVToShopify),'Validate and preview').props.onClick();
+  expect(track).toHaveBeenCalledExactlyOnceWith('tool_started',{tool:'supplier-shopify',plan:'free'});
+  expect(button(render(SupplierCSVToShopify),'Download Shopify CSV').props.disabled).toBe(true);
+  for(const [row,field,value] of [[6,'Title','Maple Bookmark'],[11,'Title','Birch Pencil Case'],[8,'Price','16.90'],[9,'Inventory quantity','48']])element(render(SupplierCSVToShopify),ShopifyOutputPreview).props.onEdit(row,field,value);
+  expect(track).toHaveBeenLastCalledWith('tool_completed',{tool:'supplier-shopify',plan:'free'});
+  button(render(SupplierCSVToShopify),'Download Shopify CSV').props.onClick();
+  expect(track).toHaveBeenLastCalledWith('export_clicked',{tool:'supplier-shopify',plan:'free'});
+  expect(harness.shopifyDownload.mock.calls[0][0].rows[0].SKU).toBe('00012345');
+  expect(JSON.stringify(track.mock.calls)).not.toMatch(/SKU|Product|00012345|\.csv|fictional/);
+ });
+ it('a real upload replaces sample status, mappings and results',async()=>{
+  harness.parse.mockResolvedValue(parseCsvText(supplierSampleCsv));
+  button(render(SupplierCSVToShopify),'Try with sample CSV').props.onClick();await flush();button(render(SupplierCSVToShopify),'Validate and preview').props.onClick();
+  harness.parse.mockResolvedValue(parseCsvText('name,sku\nReal file,00999'));
+  element(render(SupplierCSVToShopify),FileDropzone).props.onFilesSelected([privateFile]);await flush();
+  const tree=render(SupplierCSVToShopify);expect(JSON.stringify(tree)).not.toContain('Fictional sample data');
+  expect(element(tree,SelectedFiles).props.files[0]).toBe(privateFile);
+  expect(nodes(tree).some(node=>node.type===ShopifyOutputPreview)).toBe(false);
+  expect(nodes(tree).find(node=>node.props['aria-label']==='Map SKU').props.value).toBe('column_1');
+ });
+ it('sample can be removed and loaded afresh without conversion events',async()=>{
+  harness.parse.mockResolvedValue(parseCsvText(supplierSampleCsv));button(render(SupplierCSVToShopify),'Try with sample CSV').props.onClick();await flush();
+  element(render(SupplierCSVToShopify),SelectedFiles).props.onRemove(0);
+  expect(JSON.stringify(render(SupplierCSVToShopify))).not.toContain('Fictional sample data');expect(button(render(SupplierCSVToShopify),'Validate and preview').props.disabled).toBe(true);
+  button(render(SupplierCSVToShopify),'Try with sample CSV').props.onClick();await flush();expect(JSON.stringify(render(SupplierCSVToShopify))).toContain('Fictional sample data');expect(track).not.toHaveBeenCalled();
+ });
+ it.each(['free','pro'] as const)('replacing the sample with an over-limit upload remains blocked on %s',async plan=>{
+  harness.plan=plan;harness.parse.mockResolvedValue(parseCsvText(supplierSampleCsv));button(render(SupplierCSVToShopify),'Try with sample CSV').props.onClick();await flush();
+  harness.parse.mockResolvedValue({...csv,rows:Array(plan==='free'?101:10001).fill(csv.rows[0])});
+  element(render(SupplierCSVToShopify),FileDropzone).props.onFilesSelected([privateFile]);await flush();
+  const tree=render(SupplierCSVToShopify);expect(button(tree,'Validate and preview').props.disabled).toBe(true);expect(nodes(tree).some(node=>node.type===UpgradePrompt)).toBe(true);expect(track).not.toHaveBeenCalled();
+ });
  it('CRM starts on Analyze, completes after results and exports without uploaded data',async()=>{
   element(render(CRMCSVCleaner),FileDropzone).props.onFilesSelected([privateFile]);expect(track).not.toHaveBeenCalled();
   await button(render(CRMCSVCleaner),'Analyze CSV').props.onClick();
@@ -111,6 +157,61 @@ describe('tool workflow actions, not render or file-selection events',()=>{
  it('uses the read-only current Pro plan for successful processing',async()=>{
   harness.plan='pro';element(render(CRMCSVCleaner),FileDropzone).props.onFilesSelected([privateFile]);await button(render(CRMCSVCleaner),'Analyze CSV').props.onClick();
   expect(track).toHaveBeenLastCalledWith('tool_completed',{tool:'crm-cleaner',plan:'pro'});
+ });
+});
+describe('Shopify UI polish',()=>{
+ const parsed=parseCsvText(supplierSampleCsv),result=transformSupplier(parsed,suggestMappings(parsed.columns));
+ it('collapses loaded files and does not repeat the active sample action',async()=>{
+  harness.parse.mockResolvedValue(parsed);button(render(SupplierCSVToShopify),'Try with sample CSV').props.onClick();await flush();
+  const tree=render(SupplierCSVToShopify);expect(element(tree,FileDropzone).props.compactContent).toBeTruthy();
+  expect(nodes(tree).filter(node=>node.type==='button'&&node.props.children==='Try with sample CSV')).toHaveLength(0);
+ });
+ it('filters error and warning rows independently and restores all rows',()=>{
+  const preview=()=>ShopifyOutputPreview({result});
+  button(render(preview),'Rows with errors').props.onClick();expect(nodes(render(preview)).filter(node=>node.props['data-row']).map(node=>node.props['data-row'])).toEqual([6,8,9,11]);
+  button(render(preview),'Rows with warnings').props.onClick();expect(nodes(render(preview)).filter(node=>node.props['data-row']).map(node=>node.props['data-row'])).toEqual([6,11,13]);
+  button(render(preview),'All rows').props.onClick();expect(nodes(render(preview)).filter(node=>node.props['data-row'])).toHaveLength(14);
+ });
+ it('review-blocking action selects errors without allowing export',async()=>{
+  harness.parse.mockResolvedValue(parsed);button(render(SupplierCSVToShopify),'Try with sample CSV').props.onClick();await flush();button(render(SupplierCSVToShopify),'Validate and preview').props.onClick();
+  vi.stubGlobal('requestAnimationFrame',()=>{});button(render(SupplierCSVToShopify),'Review blocking issues').props.onClick();
+  const tree=render(SupplierCSVToShopify);expect(element(tree,ShopifyOutputPreview).props.filter).toBe('error');expect(button(tree,'Download Shopify CSV').props.disabled).toBe(true);
+ });
+ it('next issue opens the relevant cell editor, scrolls to it and wraps through the current filter',()=>{
+  const preview=()=>ShopifyOutputPreview({result,filter:'error',onEdit:vi.fn(()=>[])});const focus=vi.fn(),scroll=vi.fn(),cellQuery=vi.fn(()=>({focus})),fieldQuery=vi.fn((selector:string)=>selector?{querySelector:cellQuery,scrollIntoView:scroll}:null),query=vi.fn((selector:string)=>selector?{querySelector:fieldQuery}:null);
+  vi.stubGlobal('requestAnimationFrame',(callback:()=>void)=>callback());render(preview);harness.refs[0].current={querySelector:query};
+  for(let i=0;i<5;i++)button(render(preview),'Next issue').props.onClick();
+  expect(query.mock.calls.map(call=>call[0])).toEqual(['[data-row="6"]','[data-row="8"]','[data-row="9"]','[data-row="11"]','[data-row="6"]']);expect(focus).toHaveBeenCalledTimes(5);
+  expect(fieldQuery.mock.calls.map(call=>call[0])).toEqual(['[data-field="Title"]','[data-field="Price"]','[data-field="Inventory quantity"]','[data-field="Title"]','[data-field="Title"]']);
+  const editors=nodes(render(preview)).filter(node=>node.type===ShopifyEditCell&&node.props.editing);
+  expect(editors).toHaveLength(1);expect(editors[0].props).toMatchObject({row:6,field:'Title'});expect(scroll).toHaveBeenCalledTimes(5);
+ });
+ it('next issue visits separate error cells within the same row without saving drafts',()=>{
+  const issues=result.issues.filter(issue=>issue.type==='missing_title').slice(0,1).concat([{type:'invalid_price',severity:'error',rows:[6],field:'Price',message:'Review price.'}]);
+  const onEdit=vi.fn(()=>[]),preview=()=>ShopifyOutputPreview({result:{...result,issues},filter:'error',onEdit});
+  vi.stubGlobal('requestAnimationFrame',()=>{});
+  button(render(preview),'Next issue').props.onClick();expect(nodes(render(preview)).find(node=>node.type===ShopifyEditCell&&node.props.editing)?.props.field).toBe('Title');
+  button(render(preview),'Next issue').props.onClick();expect(nodes(render(preview)).find(node=>node.type===ShopifyEditCell&&node.props.editing)?.props.field).toBe('Price');expect(onEdit).not.toHaveBeenCalled();
+ });
+ it('Enter saves the exact identifier string; Escape cancels without saving',()=>{
+  const onApply=vi.fn(()=>[]),onClose=vi.fn(),props={value:'00012345',issues:[],row:1,field:'SKU' as const,onApply,editing:true,onOpen:vi.fn(),onClose};
+  vi.stubGlobal('requestAnimationFrame',()=>{});
+  element(render(()=>ShopifyEditCell(props)),'input').props.onChange({target:{value:'000000123456789012345678901234567890'}});
+  element(render(()=>ShopifyEditCell(props)),'input').props.onKeyDown({key:'Enter',nativeEvent:{isComposing:false},preventDefault:vi.fn()});
+  expect(onApply).toHaveBeenCalledExactlyOnceWith('000000123456789012345678901234567890');
+  element(render(()=>ShopifyEditCell(props)),'input').props.onKeyDown({key:'Escape'});expect(onApply).toHaveBeenCalledOnce();expect(onClose).toHaveBeenCalledTimes(2);
+ });
+ it('IME Enter does not commit an unfinished value',()=>{
+  const onApply=vi.fn(()=>[]);const tree=render(()=>ShopifyEditCell({value:'00012345',issues:[],row:1,field:'SKU',onApply,editing:true,onOpen:vi.fn(),onClose:vi.fn()}));
+  element(tree,'input').props.onKeyDown({key:'Enter',nativeEvent:{isComposing:true},preventDefault:vi.fn()});expect(onApply).not.toHaveBeenCalled();
+ });
+ it('switching to a different cell opens it without committing a draft',()=>{
+  const onApply=vi.fn(()=>[]),onOpen=vi.fn();const tree=render(()=>ShopifyEditCell({value:'00012345',issues:[],row:2,field:'SKU',onApply,editing:false,onOpen,onClose:vi.fn()}));
+  element(tree,'button').props.onClick();expect(onOpen).toHaveBeenCalledOnce();expect(onApply).not.toHaveBeenCalled();
+ });
+ it('long descriptions expose their complete original text through a keyboard-accessible disclosure',()=>{
+  const value='Long fictional description '.repeat(30);const tree=render(()=>ShopifyIssueValue({value,issues:[],row:1,field:'Description'}));
+  expect(tree.type).toBe('details');expect(element(tree,'p').props.children).toBe(value);expect(element(tree,'summary').props['aria-label']).toBe('Read full Description in row 1');
  });
 });
 describe('explicit upgrade and confirmed checkout actions',()=>{

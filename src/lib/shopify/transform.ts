@@ -26,7 +26,7 @@ export function transformSupplier(csv:ParsedCsv,mapping:Mapping,options:Transfor
   output['Published on online store']=published;if(!['true','false'].includes(published))add({type:'invalid_published',severity:'error',rows:[row],field:'Published on online store',message:'Published on online store must be true or false.'});
   for(const [field,type] of [['Price','invalid_price'],['Compare-at price','invalid_compare_at_price'],['Cost per item','invalid_cost']] as const)if(mapping[field]){const price=parsePrice(output[field]!,options.priceFormat);output[field]=price.value;if(price.error)add({type,severity:'error',rows:[row],field,message:price.error});else if(!price.value&&field==='Price')add({type:'empty_price',severity:'warning',rows:[row],field,message:'Empty Price imports at Shopify’s default price. Review before importing.'});}
   if(mapping['Inventory quantity']){const stock=output['Inventory quantity']!.trim();if(!/^\d+$/.test(stock))add({type:'invalid_inventory',severity:'error',rows:[row],field:'Inventory quantity',message:'Inventory quantity must be an integer greater than or equal to zero.'});else output['Inventory quantity']=stock.replace(/^0+(?=\d)/,'');}
-  if(mapping.Barcodes)output.Barcodes=output.Barcodes!.trim();
+  // Identifier fields (SKU and Barcodes) retain their original string values.
   if(mapping['Product image URL']){const issue=imageIssue(output['Product image URL']!,row);if(issue)add(issue);}
   if(mapping['Image alt text']&&(output['Image alt text']?.length??0)>512)add({type:'invalid_image_url',severity:'error',rows:[row],field:'Image alt text',message:'Image alt text must not exceed 512 characters.'});
   return output;

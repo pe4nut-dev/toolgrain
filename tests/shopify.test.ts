@@ -24,7 +24,7 @@ describe('Shopify mapping and transformation',()=>{
  it('mapped handles preserve original capitalization and are validated',()=>{expect(one('handle','Original-Handle').result.rows[0]['URL handle']).toBe('Original-Handle');expect(canExport(one('handle',' invalid ').result)).toBe(false);});
  it('mapped handles are checked case-insensitively for safety',()=>expect(canExport(run('title,handle\nA,Same\nB,same').result)).toBe(false));
  it('SKU preserves zeros, case and whitespace',()=>expect(one('sku',' 001234a ').result.rows[0].SKU).toBe(' 001234a '));
- it('Barcodes trim only outer whitespace and preserve zeros',()=>expect(one('ean',' 001234 ').result.rows[0].Barcodes).toBe('001234'));
+ it('Barcodes retain exact identifier strings including zeros and outer whitespace',()=>expect(one('ean',' 001234 ').result.rows[0].Barcodes).toBe(' 001234 '));
  it('valid integer stock is accepted',()=>{for(const v of ['0','12','54'])expect(canExport(one('stock',v).result)).toBe(true);});
  it.each(['12.5','-2','many',''])('invalid stock %s blocks export',v=>{expect(one('stock',v).result.issues.some(i=>i.type==='invalid_inventory')).toBe(true);expect(canExport(one('stock',v).result)).toBe(false);});
  it('valid HTTPS image syntax is accepted without fetching',()=>expect(canExport(one('image_url','https://example.com/mug.jpg').result)).toBe(true));

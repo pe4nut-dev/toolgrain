@@ -6,12 +6,12 @@ const aliases:Partial<Record<ShopifyField,readonly string[]>>={
  Title:['title','product_name','name','artikelname','produktname','bezeichnung'],
  'URL handle':['url_handle','handle','slug'],Description:['description','beschreibung','product_description'],
  Vendor:['vendor','brand','manufacturer','hersteller','marke'],
- SKU:['sku','article_number','artikelnummer','item_number','item no'],
+ SKU:['sku','supplier_sku','article_number','artikelnummer','item_number','item no'],
  Price:['price','retail_price','sale_price','vk','verkaufspreis'],
  'Compare-at price':['compare_at_price','rrp','msrp','uvp'],'Cost per item':['cost','purchase_price','buy_price','ek','einkaufspreis'],
- 'Inventory quantity':['stock','inventory','quantity','qty','bestand','lagerbestand'],
+ 'Inventory quantity':['stock','stock_quantity','inventory','quantity','qty','bestand','lagerbestand'],
  Barcodes:['barcode','barcodes','ean','gtin','upc'],'Product image URL':['image','image_url','bild','bild_url'],
- Tags:['tags','keywords'],Type:['type','product_type','category_name'],
+ Tags:['tags','keywords'],Type:['type','product_type','category_name','supplier_category'],
 };
 export function suggestMappings(columns:readonly CsvColumn[]):Mapping {
  const mapping:Mapping={};
