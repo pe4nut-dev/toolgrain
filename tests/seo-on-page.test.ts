@@ -115,7 +115,7 @@ describe('on-page SEO and public metadata', () => {
   it('covers every available tool and only existing intended public pages without invented modification dates', () => {
     const entries = sitemap();
     expect(new Set(entries.map(entry => entry.url)).size).toBe(entries.length);
-    expect(entries).toHaveLength(10);
+    expect(entries).toHaveLength(11);
     for (const tool of available) expect(entries.some(entry => entry.url === 'https://toolgrain.com/tools/' + tool.slug)).toBe(true);
     for (const entry of entries) {
       expect(entry.lastModified).toBeUndefined();

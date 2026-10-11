@@ -31,6 +31,7 @@ export function ShopifyInformation() {
       </div>)}</div>
       <p className="shopify-info-limitation">Designed for new, simple products. Variants and existing-product synchronization are not currently supported.</p>
     </section>
+    <p>Preparing your first import? <Link className="text-link" href="/guides/supplier-csv-to-shopify">Learn how to convert a supplier CSV for Shopify →</Link></p>
     <section className="shopify-info-cta" aria-labelledby="shopify-compare-heading">
       <GitCompareArrows size={22} aria-hidden="true" />
       <div><h2 id="shopify-compare-heading">Need to compare supplier files first?</h2><p>Spot added, removed and changed rows before preparing your next import.</p></div>
