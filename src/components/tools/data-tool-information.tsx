@@ -33,6 +33,7 @@ export function DataToolInformation({ compare }: { compare: boolean }) {
       <div className="shopify-info-columns">{groups.map(([title, items]) => <div key={title}><h3>{title}</h3><ul>{items.map(item => <li key={item}><Check size={16} aria-hidden="true" /><span>{item}</span></li>)}</ul></div>)}</div>
       <p className="shopify-info-limitation">{compare ? 'Missing or duplicate keys are reported separately. Only shared non-key columns are compared; key matching trims whitespace and remains case-sensitive.' : 'Duplicate matches require your review. Email checks assess format, not mailbox deliverability. Missing contact information needs manual review.'}</p>
     </section>
+    {compare&&<p>Comparing supplier catalogs? <Link className="text-link" href="/tools/supplier-csv-to-shopify">Prepare the updated supplier CSV for Shopify →</Link></p>}
     <section className="shopify-info-cta" aria-label="Related tool"><GitCompareArrows size={22} aria-hidden="true" /><div><h2>{compare ? 'Need to clean contact data first?' : 'Need to compare two exports?'}</h2><p>{compare ? 'Review duplicate contacts and data quality before comparing your exports.' : 'Spot added, removed and changed rows between two CSV files.'}</p></div><Link className="button secondary" href={compare ? '/tools/crm-csv-cleaner' : '/tools/csv-compare'}>{compare ? 'CRM CSV Cleaner' : 'CSV Compare'} →</Link></section>
   </div>;
 }

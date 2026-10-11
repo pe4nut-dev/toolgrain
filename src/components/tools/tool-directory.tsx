@@ -23,7 +23,7 @@ export function ToolDirectory({ initialCategory }: { initialCategory?: string | 
   }
 
   return <>
-    <p className="directory-value">Small tools. No complicated software.</p>
+    <p className="directory-value">One task. One tool. Done.</p>
     <div className="directory-controls">
       <div className="filters" role="group" aria-label="Filter by category">
         <button type="button" aria-pressed={category === 'all'} onClick={() => setCategory('all')}>All tools <span>{tools.length}</span></button>
@@ -36,6 +36,7 @@ export function ToolDirectory({ initialCategory }: { initialCategory?: string | 
       </label>
     </div>
     <p className="result-count" role="status" aria-live="polite" aria-atomic="true">{filtered.length} {filtered.length === 1 ? 'tool' : 'tools'}{allPlanned && ' · In development'}</p>
+    <h2 className="sr-only">Available and upcoming tools</h2>
     {filtered.length ? <ToolGrid items={filtered} /> : <div className="empty-state">
       <Search size={28} aria-hidden="true" />
       <h2>No tools found.</h2>
