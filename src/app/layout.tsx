@@ -17,6 +17,7 @@ export const metadata: Metadata = {
  metadataBase:new URL(siteConfig.url),
  title:{default:siteConfig.name+' – '+siteConfig.tagline.replace(/\.$/,''),template:'%s – '+siteConfig.name},
  description:siteConfig.description,
+ verification:{other:{'msvalidate.01':'01DD2A3F898264E18C90BF11A3EBF4A9'}},
  alternates:{canonical:siteConfig.url},
  openGraph:{locale:'en_US',type:'website',siteName:siteConfig.name,title:siteConfig.name+' – '+siteConfig.tagline.replace(/\.$/,''),description:siteConfig.description,url:siteConfig.url},
  robots:{index:true,follow:true},
